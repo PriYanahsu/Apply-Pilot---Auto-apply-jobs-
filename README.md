@@ -4,34 +4,124 @@ Smart, automatic job applications for **Naukri** and **LinkedIn Easy Apply**, ru
 
 A Chrome extension (Manifest V3) that finds **fresh** jobs on naukri.com and LinkedIn, keeps only those that **match your resume and Naukri profile**, and **applies** to them, answering the screening-question chatbot when it can. It runs entirely in your own Chrome with your existing Naukri login. There is no server.
 
-The full specification is in [BUILD_PROMPT.md](BUILD_PROMPT.md).
+## In short (for everyone)
+
+1. Download this project and add the `chrome-mv3` folder to Chrome as an extension.
+2. Get a free Gemini key from Google and paste it into ApplyPilot.
+3. Upload your resume and let ApplyPilot read your Naukri profile.
+4. Press **Find only** to see matching jobs, then **Find & Apply** to apply.
+5. ApplyPilot starts in **Test mode**, so it won't submit anything until you switch it to **Live**.
 
 ---
 
-## Install (developer mode)
+## Step 1: Download the project
+
+**Option A: no coding needed**
+1. Open this project's page on GitHub.
+2. Click the green **Code** button.
+3. Click **Download ZIP**.
+4. Find the ZIP in your Downloads folder and unzip it (right-click → **Extract All**).
+
+**Option B: with Git**
+```bash
+git clone https://github.com/PriYanahsu/Apply-Pilot---Auto-apply-jobs-.git
+```
+
+The ready-made extension is inside the project, in the folder **`.output/chrome-mv3`**.
+> Can't see `.output`? Your computer hides folders that start with a dot.
+> On Windows, open File Explorer → **View** → tick **Hidden items**. On Mac, press **Cmd + Shift + .**
+
+## Step 2: Add the extension to Chrome
+
+1. Open Chrome.
+2. Type `chrome://extensions` in the address bar and press **Enter**.
+3. Turn on **Developer mode** with the switch at the top right.
+4. Click **Load unpacked** at the top left.
+5. Select the **`chrome-mv3`** folder (inside `.output`) and click **Select Folder**.
+6. **ApplyPilot** now shows up in your extensions list.
+7. Click the puzzle icon 🧩 in Chrome's toolbar, then the pin 📌 next to ApplyPilot so it stays visible.
+8. Click the ApplyPilot icon. A panel opens on the right side of Chrome.
+
+## Step 3: Get your free Gemini key
+
+ApplyPilot uses Google's Gemini AI to read your resume and pick good jobs. Each person needs their own key, and it's free.
+
+1. Go to **[aistudio.google.com/apikey](https://aistudio.google.com/apikey)**.
+2. Sign in with your Google (Gmail) account.
+3. Click **Create API key**.
+4. A long code appears, starting with `AIza...`. Click **Copy**.
+5. Keep this key private, like a password.
+
+## Step 4: Paste the key into ApplyPilot
+
+1. In the ApplyPilot panel, open the **Setup** tab.
+2. Find the **AI connection (Gemini)** section.
+3. Click inside the **API key** box and paste the key (**Ctrl + V**, or **Cmd + V** on Mac).
+4. Click **Test models**.
+5. If you see "… models work right now", your key works. ✅
+6. Scroll to the bottom and click **Save settings**.
+
+Your key stays only in your own Chrome and is sent only to Google.
+
+## Step 5: Set up your profile (resume + Naukri)
+
+1. Open **naukri.com** in the same Chrome and **log in** to your account.
+2. Back in ApplyPilot, in **Setup**, find **Resume & Naukri profile**.
+3. Click **Choose file** and select your resume **PDF**.
+   - If your resume is a scanned image, click **paste text instead** and paste your resume text.
+4. Click **Read my Naukri profile**.
+5. Wait about a minute. ApplyPilot reads your resume first, then fills in missing details (salary, notice period, and so on) from your Naukri profile. It **never changes** your Naukri profile.
+6. Look at the summary under **Your details**. Only change something if it's wrong.
+7. Check **Keywords** (the job titles to search for, e.g. `React Developer, Frontend Developer`) and **Locations** (e.g. `Bangalore, Pune`).
+8. Click **Save settings**.
+
+## Step 6: Find and apply to jobs
+
+1. Open the **Run** tab.
+2. Click **Find only**. ApplyPilot searches for fresh jobs and scores them against your resume. Nothing is applied yet.
+3. Open the **Jobs** tab to see what it found and each job's match score.
+4. Back in **Run**, click **Find & Apply**.
+   - You're still in **Test mode**, so it only *pretends* to apply. The log shows "WOULD APPLY" for each job it would have applied to.
+5. When the results look right, turn on the **Test mode** switch at the top of **Run**. The badge changes to **Live**, and real applications start.
+6. For your first real run, set **Max applies per run** to **2**.
+
+## What each button does
+
+| Button | What it does |
+|---|---|
+| **Test models** | Checks that your Gemini key works |
+| **Read my Naukri profile** | Reads your resume and Naukri profile |
+| **Save settings** | Saves everything on the Setup tab |
+| **Find only** | Finds and scores jobs without applying |
+| **Find & Apply** | Finds jobs and applies to the good matches |
+| **Apply queued** | Applies to jobs already found and scored as good matches |
+| **Pause / Resume / Stop** | Controls a run while it's going |
+| **Start fresh** | Clears today's searches so you can search again |
+| Header dropdown | Switches between **Naukri** and **LinkedIn** |
+
+## Good to know
+
+- **Keep Chrome open** while it runs. It works in a tab of its own, so don't close that tab.
+- **Review tab:** if a recruiter asks a question ApplyPilot can't answer, the job goes here. Type the answer once, and ApplyPilot remembers it for next time.
+- **Captcha:** if Naukri shows a captcha, the run pauses. Solve it in the Naukri tab and click **Resume**.
+- **Company-website jobs** are saved for you to apply to yourself.
+- **"Gemini quota reached":** the free daily limit is used up. Try again tomorrow, or click **Resume** later.
+- **LinkedIn:** pick **LinkedIn** in the header dropdown and log in to linkedin.com. Keep the numbers low, because LinkedIn may restrict accounts that look automated.
+
+---
+
+## For developers
+
+### Build from source
 
 ```bash
 npm install
 npm run build          # output goes to .output/chrome-mv3
 ```
 
-1. Open `chrome://extensions` and switch on **Developer mode** (top right).
-2. Click **Load unpacked** and choose the `.output/chrome-mv3` folder.
-3. Click the extension icon to open the **side panel**.
+Then load `.output/chrome-mv3` in Chrome as in Step 2. Run `npm run build` again before pushing, so the shared build stays up to date. For development with auto-reload, use `npm run dev`.
 
-For development with auto-reload, use `npm run dev`.
-
-## First run
-
-1. **Log in to naukri.com** in this Chrome window.
-2. **Setup tab:**
-   1. Paste **your own** Gemini API key (free from [aistudio.google.com/apikey](https://aistudio.google.com/apikey)) and press **Test models**.
-   2. Upload your resume PDF. If it's a scanned PDF, use "paste text instead".
-   3. Click **Refresh profile**. It reads your **resume first**, then opens your Naukri profile (read-only) to fill in what the resume doesn't say, such as CTC and notice period. There's no form to fill in; check the details it found under "Your details" and correct one only if it's wrong.
-   4. Check the keywords and filters, then press **Save settings**.
-3. **Run tab:** press **Find only** first and look at the results in the **Jobs** tab.
-4. **Test mode is ON by default.** Press **Find & Apply** and check the "WOULD APPLY" lines in the log.
-5. When the results look right, tick **"apply for real"** at the top of the **Run** tab. For your first real runs, set *Max applies per run* = 2 and *Minimum match score* = 85, and watch the worker tab.
+The full specification is in [BUILD_PROMPT.md](BUILD_PROMPT.md).
 
 ## Gemini key and model fallback
 
@@ -160,4 +250,3 @@ tests/               Vitest unit tests + HTML fixtures
 ## Privacy
 
 Everything stays in your browser (IndexedDB). The only network calls go to `naukri.com`, as you, and to `generativelanguage.googleapis.com` for Gemini. There are no analytics. The extension never stores your Naukri password and never edits your Naukri profile.
-# Apply-Pilot---Auto-apply-jobs-

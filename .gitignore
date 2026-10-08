@@ -1,5 +1,6 @@
 node_modules
-.output
+.output/*
+!.output/chrome-mv3/
 .wxt
 *.zip
 .env.local
