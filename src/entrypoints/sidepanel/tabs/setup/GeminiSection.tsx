@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { DEFAULT_GEMINI_MODELS } from '../../../../config';
 import type { ModelTestResult } from '../../../../ai/gemini';
+import { saveSettings } from '../../../../db/database';
 import type { Settings } from '../../../../db/types';
 import { sendToBackground } from '../../../../shared/messages';
 import { Button, Field, Message, Section } from '../../ui';
@@ -17,6 +18,13 @@ export default function GeminiSection(props: { draft: Settings; change: ChangeSe
   const [results, setResults] = useState<ModelTestResult[]>([]);
   const [testing, setTesting] = useState(false);
   const [message, setMessage] = useState({ text: '', kind: 'info' as 'info' | 'error' | 'success' });
+
+  // The key is saved as soon as it is typed: profile reading and runs use the SAVED key, not this form.
+  function updateKey(value: string) {
+    const geminiApiKey = value.trim();
+    props.change({ geminiApiKey });
+    saveSettings({ geminiApiKey }).catch((error) => setMessage({ text: `Could not save the key: ${error}`, kind: 'error' }));
+  }
 
   function updateModels(text: string) {
     setModelsText(text);
@@ -42,7 +50,7 @@ export default function GeminiSection(props: { draft: Settings; change: ChangeSe
   return (
     <Section step={1} done={Boolean(props.draft.geminiApiKey)} title="AI connection (Gemini)" description="Used to read your resume, score jobs and answer screening questions.">
       <Field label="API key" hint="Use your own free key from aistudio.google.com/apikey. It is stored only in this browser and sent only to Google Gemini.">
-        <input type="password" value={props.draft.geminiApiKey} onChange={(event) => props.change({ geminiApiKey: event.target.value.trim() })} />
+        <input type="password" value={props.draft.geminiApiKey} onChange={(event) => updateKey(event.target.value)} />
       </Field>
       <details className="mb-3">
         <summary className="cursor-pointer text-xs font-medium text-slate-600">Models ({props.draft.geminiModels.length}, tried in order when one hits its limit)</summary>

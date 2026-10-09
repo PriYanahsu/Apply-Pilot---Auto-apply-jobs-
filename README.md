@@ -49,7 +49,7 @@ ApplyPilot uses Google's Gemini AI to read your resume and pick good jobs. Each 
 1. Go to **[aistudio.google.com/apikey](https://aistudio.google.com/apikey)**.
 2. Sign in with your Google (Gmail) account.
 3. Click **Create API key**.
-4. A long code appears, starting with `AIza...`. Click **Copy**.
+4. A long code appears. Click **Copy**.
 5. Keep this key private, like a password.
 
 ## Step 4: Paste the key into ApplyPilot
