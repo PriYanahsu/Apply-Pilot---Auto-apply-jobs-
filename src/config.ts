@@ -42,6 +42,9 @@ export const GEMINI_MAX_WAIT_ROUNDS = 3;
 export const GEMINI_SCORE_BATCH_SIZE = 8;
 export const JOB_DESCRIPTION_CHARS_FOR_SCORING = 2_500;
 export const RESUME_CHARS_FOR_ANSWERS = 6_000;
+// "Not found" answers are re-checked once with the WHOLE resume + Naukri + LinkedIn profiles (personal details
+// like date of birth sit at the bottom of the profile page, past the normal excerpt).
+export const PROFILE_CHARS_FOR_RECHECK = 20_000;
 
 export const HARD_MAX_DAILY_CAP = 50;
 export const MAX_NEW_JOBS_PER_RUN_LIMIT = 200; // the "jobs to find per run" input can't go above this
@@ -66,7 +69,7 @@ export const CONFIRM_APPLY_WAIT_MS = 4_000;
 export const CONFIRMATION_PAGE_WAIT_MS = 15_000; // how long to wait for Naukri's own "application saved" page                            // after applying, before reloading to confirm
 export const APPLY_RESULT_TIMEOUT_MS = 12_000;
 export const CHATBOT_MAX_QUESTIONS = 15;
-export const CHATBOT_TOTAL_TIMEOUT_MS = 120_000;
+export const CHATBOT_TOTAL_TIMEOUT_MS = 300_000; // several AI answers (plus re-checks) take a few minutes
 export const CHATBOT_NEXT_QUESTION_TIMEOUT_MS = 8_000;
 export const HUMAN_CLICK_DELAY_MS = { min: 600, max: 1_500 };
 export const HUMAN_TYPE_DELAY_MS = { min: 400, max: 900 };  // short pause after filling an answer, before Send

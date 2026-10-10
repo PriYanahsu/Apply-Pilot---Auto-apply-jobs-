@@ -2,7 +2,8 @@
  * FILE: steps/8-answerScreening.ts
  * WHAT: Drives Naukri's screening-question chatbot for one job. For each question the answer comes from
  *       (1) saved answers, (2) simple rules, (3) Gemini P3. If none is confident or valid -> needs_review.
- *       NEVER guesses (rule R5). Max 15 questions / 60 seconds.
+ *       A "not found" AI answer is re-checked once with the full resume + Naukri + LinkedIn profiles.
+ *       NEVER guesses (rule R5). Max 15 questions / 5 minutes.
  * CALLED BY: steps/8-applyToJob.ts
  * RETURNS: { status: 'applied' | 'needs_review' | 'failed', reason, qa, pendingQuestion? }
  * IF IT BREAKS: wrong answers -> fix them in the Answers tab; stuck questions -> naukri/chatbot.ts selectors.
@@ -62,25 +63,34 @@ export async function resolveAnswer(state: ChatbotState, job: Job, settings: Set
   const platform = jobPlatform(job);
   const facts = getEffectiveFacts(settings, profile, platform);
   const profileText = platform === 'linkedin' ? profile.linkedin?.profileText ?? profile.naukriProfileText : profile.naukriProfileText;
+  // The other site's profile, used when re-checking a "not found" answer (e.g. date of birth only on Naukri).
+  const otherProfileText = platform === 'linkedin' ? profile.naukriProfileText : profile.linkedin?.profileText;
   const ruleAnswer = answerFromRules(state.question, state.options, facts, profile, settings.autoAnswerPreferences);
   if (ruleAnswer) return { answer: [ruleAnswer], source: 'rules' };
 
-  const ask = (question: string) => askGemini(screeningAnswerPrompt({
+  const ask = (question: string, fullDetail = false) => askGemini(screeningAnswerPrompt({
     facts, profile, jobTitle: job.title, company: job.company,
     question, inputType: state.inputType, options: state.options,
     autoAnswerPreferences: settings.autoAnswerPreferences, profileText, profileSite: platform === 'linkedin' ? 'LINKEDIN' : 'NAUKRI',
+    otherProfileText, otherProfileSite: platform === 'linkedin' ? 'NAUKRI' : 'LINKEDIN', fullDetail,
   }), job.jobId);
   let gemini = await ask(state.question);
+  const notFound = state.options.length > 0 ? gemini.confidence <= 0 : gemini.confidence < MIN_ANSWER_CONFIDENCE;
+  if (notFound) {
+    // Don't give up on the excerpt: re-check the WHOLE resume and BOTH site profiles once.
+    await log('8-chatbot', `Not found in the excerpt - re-checking your full resume, Naukri and LinkedIn profiles: "${state.question}"`, { jobId: job.jobId });
+    gemini = await ask(state.question, true);
+  }
   const isOptionQuestion = state.options.length > 0;
   let geminiValid = validateAgainstOptions(gemini.answer, state.options);
   if (isOptionQuestion && (!geminiValid || geminiValid.length === 0)) {
     // e.g. the AI said "1" but the options are ranges: ask once more, this time it must copy an option exactly.
-    gemini = await ask(`${state.question}\nIMPORTANT: your answer "${gemini.answer.join(', ')}" is not one of the OPTIONS. Reply with the closest option, copied exactly from OPTIONS.`);
+    gemini = await ask(`${state.question}\nIMPORTANT: your answer "${gemini.answer.join(', ')}" is not one of the OPTIONS. Reply with the closest option, copied exactly from OPTIONS.`, notFound);
     geminiValid = validateAgainstOptions(gemini.answer, state.options);
   }
   // Choosing one of the listed options can't invent a fact, so any real choice is accepted there.
   const tooUnsure = isOptionQuestion ? gemini.confidence <= 0 : gemini.confidence < MIN_ANSWER_CONFIDENCE;
-  if (tooUnsure) return { problem: `Gemini could not answer from your resume / profile (${gemini.confidence}): ${gemini.basis}` };
+  if (tooUnsure) return { problem: `Not found in your resume, Naukri or LinkedIn profile (checked all three): ${gemini.basis}` };
   if (!geminiValid || geminiValid.length === 0) return { problem: `Gemini answer "${gemini.answer.join(', ')}" is not one of the options` };
 
   const maxChars = needsExplanation(state.question) ? MAX_EXPLAIN_ANSWER_CHARS : MAX_TEXT_ANSWER_CHARS;

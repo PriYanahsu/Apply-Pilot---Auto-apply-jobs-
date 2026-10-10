@@ -88,3 +88,11 @@ describe('screening rules', () => {
     expect(answerFromRules('Years of experience in Golang?', [], facts, profile)).toBe('2');
   });
 });
+
+describe('Naukri personal details are never cut off', () => {
+  it('moves the Personal details block to the front of the profile text', async () => {
+    const { withPersonalDetailsFirst } = await import('../src/naukri/readProfilePage');
+    const page = `${'Employment '.repeat(1000)}Personal details Date of birth 12 Mar 2001 Gender Male`;
+    expect(withPersonalDetailsFirst(page).slice(0, 100)).toContain('Date of birth 12 Mar 2001');
+  });
+});

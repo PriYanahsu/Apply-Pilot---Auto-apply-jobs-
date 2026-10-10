@@ -12,6 +12,8 @@ import type { NaukriProfile } from '../shared/messages';
 
 const PROFILE_WAIT_MS = 15_000;
 const MIN_PROFILE_TEXT_CHARS = 1_500;
+const PROFILE_SCROLL_STEPS = 6;
+const PERSONAL_DETAILS_CHARS = 1_500;
 
 /** The profile page loads its sections lazily; wait until a reasonable amount of text is there. */
 export async function waitForProfilePage(): Promise<void> {
@@ -20,9 +22,24 @@ export async function waitForProfilePage(): Promise<void> {
   } catch (error) {
     console.log('[readProfilePage] profile page has little text; reading what is there', error);
   }
-  // Scrolling to the bottom makes Naukri render its lazy sections (key skills, IT skills, employment).
-  window.scrollTo(0, document.body.scrollHeight);
-  await new Promise((resolve) => setTimeout(resolve, 2_000));
+  // Scrolling down step by step makes Naukri render its lazy sections (key skills, IT skills, employment,
+  // personal details at the very bottom). One jump to the end can skip the ones in between.
+  for (let step = 1; step <= PROFILE_SCROLL_STEPS; step += 1) {
+    window.scrollTo(0, (document.body.scrollHeight * step) / PROFILE_SCROLL_STEPS);
+    await new Promise((resolve) => setTimeout(resolve, 400));
+  }
+  await new Promise((resolve) => setTimeout(resolve, 1_500));
+}
+
+/**
+ * The "Personal details" block (date of birth, gender, languages, category...) is at the very bottom of the
+ * page, so it is moved to the FRONT of the profile text: excerpts and length limits can never cut it off.
+ */
+export function withPersonalDetailsFirst(fullText: string): string {
+  const start = fullText.search(/personal details/i);
+  if (start < 0) return fullText;
+  const block = fullText.slice(start, start + PERSONAL_DETAILS_CHARS);
+  return `${block}\n\n${fullText}`;
 }
 
 export function readProfilePage(root: Document = document): NaukriProfile {
@@ -40,7 +57,7 @@ export function readProfilePage(root: Document = document): NaukriProfile {
     expectedCtcLpa: parseRupeesToLpa(fullText.match(/expected\s*(?:ctc|salary)[^₹\d]*₹?\s*([\d,.]+)\s*(lacs?|lakhs?|lpa)?/i)),
     noticePeriodDays: parseNoticeDays(fullText),
     phone: fullText.match(/(?:\+91[\s-]?)?[6-9]\d{9}/)?.[0] ?? '',
-    fullText: fullText.slice(0, 20_000),
+    fullText: withPersonalDetailsFirst(fullText).slice(0, 20_000),
   };
 }
 

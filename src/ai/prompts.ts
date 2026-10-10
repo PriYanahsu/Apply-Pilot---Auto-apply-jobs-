@@ -7,7 +7,7 @@
  * IF IT BREAKS: wrong scores -> tune P2's scoring guide; made-up answers -> tighten P3's rules.
  */
 import { z } from 'zod';
-import { JOB_DESCRIPTION_CHARS_FOR_SCORING, RESUME_CHARS_FOR_ANSWERS } from '../config';
+import { JOB_DESCRIPTION_CHARS_FOR_SCORING, PROFILE_CHARS_FOR_RECHECK, RESUME_CHARS_FOR_ANSWERS } from '../config';
 import type { CandidateProfile, Facts, Job } from '../db/types';
 import { workHistoryText } from '../matching/workHistory';
 import type { GeminiPrompt } from './gemini';
@@ -120,9 +120,16 @@ export interface AnswerPromptInput {
   autoAnswerPreferences: boolean;
   profileText?: string;  // the site's own profile text (Naukri or LinkedIn)
   profileSite?: string;
+  otherProfileText?: string;  // the other site's profile (re-check pass)
+  otherProfileSite?: string;
+  fullDetail?: boolean;       // re-check pass: send the WHOLE resume and profiles, not excerpts
 }
 
 export function screeningAnswerPrompt(input: AnswerPromptInput): GeminiPrompt<GeminiAnswer> {
+  const chars = input.fullDetail ? PROFILE_CHARS_FOR_RECHECK : RESUME_CHARS_FOR_ANSWERS;
+  const otherProfile = input.fullDetail && input.otherProfileText
+    ? `\n${input.otherProfileSite ?? 'OTHER'} PROFILE (full): ${input.otherProfileText.slice(0, chars)}`
+    : '';
   return {
     promptName: 'P3-answer',
     system: `You fill job application screening questions on behalf of a candidate, fully automatically - nobody
@@ -147,7 +154,13 @@ How to answer common question types (confidence >= 0.8 when you follow these):
 - "Years of experience in X?" -> use X's years in PROFILE SKILLS when shown; otherwise add up the WORK HISTORY
   jobs where X was used (round to whole or .5 years). If X is not in the resume or skills at all, answer "0".
 - Total experience, CTC, notice period, location, phone, email -> from CANDIDATE FACTS.
-- Degree / graduation year / college questions -> from the resume's education section only.
+- Degree / graduation year / college questions -> from the resume's education section (or the profile's
+  education section if the resume has none).
+- Personal details (date of birth, gender, marital status, category, languages, address, disability, passport,
+  work permit, military service) -> look in EVERY profile's personal-details section; copy the value as written
+  (dates of birth in the format the question asks, else DD/MM/YYYY).
+- Combined skills ("Java Selenium", "React with TypeScript") -> years of the jobs where those were used together;
+  if only one part was used, the years of that part. Never "0" when any part is in the work history.
 - OPTION questions (chips / radio / dropdown): ALWAYS pick the option that best matches the candidate's resume,
   e.g. "In which domain have you worked?" with options [BPM, IT Services, Technology] -> the one closest to their
   employers / projects. Never refuse an option question; confidence = how well the option fits.
@@ -162,8 +175,8 @@ ${JSON.stringify(input.facts)}
 PROFILE SKILLS (years of use where known): ${profileSkillsText(input.profile)}
 WORK HISTORY (newest first):
 ${workHistoryText(input.profile.workHistory)}
-RESUME (excerpt): ${input.profile.resumeText.slice(0, RESUME_CHARS_FOR_ANSWERS)}
-${input.profileSite ?? 'NAUKRI'} PROFILE (excerpt): ${(input.profileText ?? input.profile.naukriProfileText).slice(0, RESUME_CHARS_FOR_ANSWERS)}
+RESUME${input.fullDetail ? ' (full)' : ' (excerpt)'}: ${input.profile.resumeText.slice(0, chars)}
+${input.profileSite ?? 'NAUKRI'} PROFILE${input.fullDetail ? ' (full)' : ' (excerpt)'}: ${(input.profileText ?? input.profile.naukriProfileText).slice(0, chars)}${otherProfile}
 JOB: ${input.jobTitle} at ${input.company}
 
 QUESTION: ${input.question}
