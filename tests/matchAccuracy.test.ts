@@ -96,3 +96,41 @@ describe('Naukri personal details are never cut off', () => {
     expect(withPersonalDetailsFirst(page).slice(0, 100)).toContain('Date of birth 12 Mar 2001');
   });
 });
+
+describe('field check: a developer is not sent to tester / editor jobs', async () => {
+  const { candidateFamilies, roleFamily, roleMismatch } = await import('../src/matching/roleFamily');
+  const developer = candidateFamilies({
+    currentTitle: 'Software Engineer', targetTitles: ['Full Stack Developer', 'React Developer'],
+    workHistory: [{ title: 'Frontend Developer', company: 'A', skills: [] }],
+  });
+  it('sorts titles into fields (specific fields first)', () => {
+    expect(roleFamily('Automation Tester-2-13yrs-s')).toBe('testing');
+    expect(roleFamily('Software Test Engineer')).toBe('testing');
+    expect(roleFamily('Technical Editor')).toBe('content');
+    expect(roleFamily('Sales Engineer')).toBe('sales_marketing');
+    expect(roleFamily('MERN Stack Developer')).toBe('developer');
+    expect(roleFamily('Associate')).toBeUndefined();
+  });
+  it('software engineer, full stack and developer are the same field', () => {
+    expect(roleMismatch('Java Full Stack Developer', developer)).toBeNull();
+    expect(roleMismatch('SDE 1', developer)).toBeNull();
+    expect(roleMismatch('Associate', developer)).toBeNull(); // unknown field: the AI decides
+  });
+  it('skips testing and content jobs for a developer', () => {
+    expect(roleMismatch('Automation Tester', developer)).toContain('testing');
+    expect(roleMismatch('Technical Editor', developer)).toContain('content');
+  });
+  it('a tester by experience still gets testing jobs', () => {
+    const tester = candidateFamilies({ currentTitle: 'QA Engineer', targetTitles: [], workHistory: [] });
+    expect(roleMismatch('Automation Tester', tester)).toBeNull();
+  });
+});
+
+describe('date of birth and gender come from your details', () => {
+  it('answers DOB / gender questions without the AI', () => {
+    const facts = { dateOfBirth: '12 Mar 2001', gender: 'Male' };
+    expect(answerFromRules('what is your DOB?', [], facts, profile)).toBe('12 Mar 2001');
+    expect(answerFromRules('Please share your date of birth', [], facts, profile)).toBe('12 Mar 2001');
+    expect(answerFromRules('Gender', ['Male', 'Female', 'Other'], facts, profile)).toBe('Male');
+  });
+});

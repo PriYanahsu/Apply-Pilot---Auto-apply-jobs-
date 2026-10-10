@@ -109,6 +109,7 @@ Each job gets a score from 0 to 100:
 
 - **AI recruiter review (65%)**: Gemini checks the role type, the job's **must-have** skills against the evidence in your work history (where and how long you used each one), and your seniority. A missing core requirement is a **deal-breaker** and caps the score at 40.
 - **Keyword check (35%)**: your skills vs the job's skills (read from the description when the job has no skill tags), the job title vs your target roles, and your years vs the job's experience range.
+- **Your field comes first.** Your field (developer, testing, content, sales, support, data, DevOps...) is read from your resume's recent jobs, then your current title and target roles. Jobs in another field are skipped before scoring: a developer is never sent to "Automation Tester" or "Technical Editor" jobs. Setup shows the detected field.
 - Skills the AI calls "missing" but you actually have under another spelling (ReactJS / React) are removed automatically.
 
 ## Good to know

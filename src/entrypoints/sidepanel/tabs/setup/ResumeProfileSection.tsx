@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { MIN_RESUME_TEXT_CHARS } from '../../../../config';
 import { applyProfileEdits, db, getSettings, saveSettings } from '../../../../db/database';
 import type { CandidateProfile, ProfileEdits, Skill } from '../../../../db/types';
+import { ROLE_FAMILY_NAMES, candidateFamilies } from '../../../../matching/roleFamily';
 import { normalizeSkill } from '../../../../matching/skillSynonyms';
 import { sendToBackground } from '../../../../shared/messages';
 import { Icon } from '../../icons';
@@ -106,6 +107,7 @@ export default function ResumeProfileSection(props: { onProfileBuilt: () => void
 function ProfileView({ profile, edits }: { profile: CandidateProfile; edits: ProfileEdits }) {
   const shown = applyProfileEdits(profile, edits);
   const [newSkill, setNewSkill] = useState('');
+  const fields = Array.from(candidateFamilies(shown)).map((family) => ROLE_FAMILY_NAMES[family]);
   const changed = edits.addedSkills.length > 0 || edits.removedSkills.length > 0 || Boolean(edits.targetTitles?.length);
 
   function saveEdits(changes: Partial<ProfileEdits>) {
@@ -146,6 +148,12 @@ function ProfileView({ profile, edits }: { profile: CandidateProfile; edits: Pro
         <p className="mb-1 flex items-center gap-1 font-medium text-slate-800"><Icon name="info" className="h-3.5 w-3.5 text-brand-600" />Check these two - they decide which jobs match you</p>
         <p className="text-[11px] text-slate-500">Changes save instantly and are kept when your profile is re-read.</p>
       </div>
+
+      <p className="text-slate-700">
+        <span className="font-medium">Your field:</span>{' '}
+        {fields.length > 0 ? <b className="text-brand-700">{fields.join(', ')}</b> : <span className="text-slate-500">not clear from your resume</span>}
+        <span className="block text-[11px] text-slate-500">Read from your recent jobs, current title and target roles. Jobs in other fields (e.g. testing, content, sales for a developer) are skipped. Wrong? Change your target roles below.</span>
+      </p>
 
       <label className="block">
         <span className="mb-1 block font-medium text-slate-700">Target roles <span className="font-normal text-slate-500">(the jobs you want)</span></span>

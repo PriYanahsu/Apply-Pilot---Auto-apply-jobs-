@@ -10,6 +10,7 @@ import { db, getSettings, jobPlatform, updateJob } from '../../../db/database';
 import type { Job } from '../../../db/types';
 import { normalizeQuestion } from '../../../matching/answerRules';
 import { Icon } from '../icons';
+import { isClosingMessage } from '../../../naukri/selectors';
 import { Button, Card, EmptyState } from '../ui';
 
 export default function NeedsReviewTab() {
@@ -46,11 +47,20 @@ function ReviewCard({ job }: { job: Job }) {
       <a href={job.url} target="_blank" rel="noreferrer" className="text-[13px] font-semibold text-slate-900 hover:text-brand-700">{job.title}</a>
       <p className="text-xs text-slate-500">{job.company}</p>
 
-      {pending ? (
+      {pending && isClosingMessage(pending.question) ? (
+        <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+          <p>The chatbot said <i>"{pending.question}"</i> - that is its goodbye, not a question. The application was most likely sent.</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button kind="primary" size="sm" icon="check" onClick={() => updateJob(job.jobId, { status: 'applied', appliedAt: new Date().toISOString(), pendingQuestion: undefined, error: undefined })}>Mark applied</Button>
+            <a href={job.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-emerald-800 hover:bg-emerald-100"><Icon name="external" className="h-3 w-3" />Check on the job page</a>
+          </div>
+        </div>
+      ) : pending ? (
         <>
           <div className="my-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
             <p className="mb-0.5 flex items-center gap-1 text-[10px] font-semibold tracking-wide text-amber-700 uppercase"><Icon name="help" className="h-3 w-3" />Recruiter asks</p>
             <p className="text-[13px] text-slate-800">{pending.question}</p>
+            {job.error && <p className="mt-1 text-[11px] text-amber-800">Why it stopped: {job.error}</p>}
           </div>
           {pending.options.length > 0 ? (
             <div className="space-y-1.5">

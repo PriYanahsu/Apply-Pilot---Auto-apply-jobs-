@@ -87,6 +87,8 @@ export function mergeFacts(resume: ParsedResume, naukri: ParsedNaukriProfile, sc
   pick('currentCtcLpa', resume.currentCtcLpa, naukri.currentCtcLpa ?? scraped.currentCtcLpa);
   pick('expectedCtcLpa', resume.expectedCtcLpa, naukri.expectedCtcLpa ?? scraped.expectedCtcLpa);
   pick('noticePeriodDays', resume.noticePeriodDays, naukri.noticePeriodDays ?? scraped.noticePeriodDays);
+  pick('dateOfBirth', resume.dateOfBirth, naukri.dateOfBirth);
+  pick('gender', resume.gender, naukri.gender);
   return { autoFacts, factSources };
 }
 

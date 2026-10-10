@@ -5,6 +5,7 @@
  * IF IT BREAKS: wrong jobs passing/failing? The reason text is saved on job.filterReason - start there.
  */
 import { experienceFits, parseExperienceRange } from './experienceRange';
+import { roleMismatch, type RoleFamily } from './roleFamily';
 import { jobSkillsFor, skillOverlap, titleSimilarity } from './ruleScore';
 
 export interface FilterJobInput {
@@ -26,6 +27,7 @@ export interface FilterSettingsInput {
 export interface FilterProfileInput {
   skillNames: string[];
   targetTitles: string[];
+  families?: Set<RoleFamily>;  // your fields (resume first); a job in another field is skipped
 }
 
 const ALWAYS_ALLOWED_LOCATIONS = ['remote', 'work from home', 'wfh', 'anywhere'];
@@ -60,6 +62,9 @@ export function locationMatches(jobLocation: string, wantedLocations: string[]):
 export function checkHardFilters(job: FilterJobInput, settings: FilterSettingsInput, profile: FilterProfileInput): string | null {
   const badWord = titleHasExcludedWord(job.title, settings.excludeTitleWords);
   if (badWord) return `Title contains excluded word "${badWord}"`;
+
+  const otherField = profile.families ? roleMismatch(job.title, profile.families) : null;
+  if (otherField) return otherField;
 
   const company = job.company.toLowerCase();
   const excludedCompany = settings.excludeCompanies.find((name) => name.trim() && company.includes(name.trim().toLowerCase()));

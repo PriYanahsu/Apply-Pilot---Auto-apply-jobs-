@@ -16,7 +16,7 @@ import {
 import { db, getEffectiveFacts, jobPlatform, updateJob } from '../db/database';
 import type { CandidateProfile, Job, QaItem, Settings } from '../db/types';
 import { answerFromRules, bestOptionMatch, findSavedAnswer } from '../matching/answerRules';
-import { CHATBOT_CLOSING_TEXTS, CHATBOT_INTRO_TEXTS } from '../naukri/selectors';
+import { CHATBOT_INTRO_TEXTS, isClosingMessage } from '../naukri/selectors';
 import { sendToContent } from '../orchestrator/workerTab';
 import { errorCode } from '../shared/errors';
 import { log } from '../shared/log';
@@ -126,14 +126,7 @@ async function saveChatbotEvidence(job: Job, state: ChatbotState): Promise<void>
   });
 }
 
-/**
- * "Thank you for your responses." is Naukri's goodbye, not a question: it submits the application by itself.
- * Answering it sends an unexpected extra reply and Naukri refuses the application (code 406).
- */
-export function isClosingMessage(text: string): boolean {
-  const lower = text.toLowerCase().trim();
-  return CHATBOT_CLOSING_TEXTS.some((closing) => lower.startsWith(closing) || (lower.includes(closing) && !lower.includes('?')));
-}
+export { isClosingMessage };
 
 /** "Hi <name>, thank you for showing interest. Kindly answer all the recruiter's questions..." is an intro, not a question. */
 export function isIntroMessage(text: string): boolean {
@@ -156,6 +149,12 @@ export async function answerScreening(job: Job, settings: Settings, profile: Can
       return result.result === 'applied' ? { status: 'applied', reason: 'Chatbot closed after success', qa } : { status: 'failed', reason: 'Chatbot closed without a success message', qa };
     }
     const pendingQuestion = { question: state.question, inputType: state.inputType, options: state.options };
+    // The goodbye message is checked FIRST: a chatbot that finished right at the time limit is still applied.
+    // Old chips from the last question can still be on screen, so options don't matter here.
+    if (isClosingMessage(state.question)) {
+      await log('8-chatbot', `Chatbot finished ("${state.question}") - not answering; Naukri submits by itself`, { jobId: job.jobId });
+      return { status: 'applied', reason: 'Chatbot said it is finished', qa };
+    }
     if (Date.now() > deadline) return { status: 'needs_review', reason: `Chatbot took longer than ${CHATBOT_TOTAL_TIMEOUT_MS / 1000} s`, qa, pendingQuestion };
     if (!state.question) return { status: 'needs_review', reason: 'Could not read the chatbot question', qa, pendingQuestion };
     if (isIntroMessage(state.question) && state.options.length === 0) {
@@ -163,10 +162,6 @@ export async function answerScreening(job: Job, settings: Settings, profile: Can
       previousQuestion = state.question;
       state = await waitForNextState(previousQuestion, job.jobId);
       continue;
-    }
-    if (isClosingMessage(state.question) && state.options.length === 0) {
-      await log('8-chatbot', `Chatbot finished ("${state.question}") - not answering; Naukri submits by itself`, { jobId: job.jobId });
-      return { status: 'applied', reason: 'Chatbot said it is finished', qa };
     }
     repeatCount = state.question === previousQuestion ? repeatCount + 1 : 0;
     if (repeatCount >= 2) return { status: 'needs_review', reason: `Question repeated: "${state.question}"`, qa, pendingQuestion };

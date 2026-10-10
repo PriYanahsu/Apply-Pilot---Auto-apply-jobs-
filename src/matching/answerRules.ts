@@ -146,6 +146,8 @@ export function answerFromRules(question: string, options: string[], facts: Fact
     answer = days === undefined ? null : formatNumber(/month/.test(lower) ? days / 30 : days);
   } else if (/relocat/.test(lower)) answer = facts.willingToRelocate === undefined ? null : facts.willingToRelocate ? 'Yes' : 'No';
   else if (/current\s*(location|city)|where.*(located|based)/.test(lower)) answer = facts.currentLocation || null;
+  else if (/\b(dob|d\.o\.b|date of birth|birth\s*date|born on)\b/.test(lower)) answer = facts.dateOfBirth || null;
+  else if (/\bgender\b/.test(lower)) answer = facts.gender || null;
   else if (/years?|experience/.test(lower)) answer = yearsForSkillQuestion(question, profile, facts);
   if (answer === null) return null;
   return bestOptionMatch(answer, options);

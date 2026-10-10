@@ -8,6 +8,7 @@
 import { db, getEffectiveFacts, getProfile, getSettings, jobPlatform, updateJob } from '../db/database';
 import type { CandidateProfile, Job, Settings } from '../db/types';
 import { checkHardFilters } from '../matching/hardFilters';
+import { candidateFamilies } from '../matching/roleFamily';
 import { bumpCounter } from '../orchestrator/runState';
 import { makeError } from '../shared/errors';
 import { log } from '../shared/log';
@@ -21,6 +22,7 @@ export function filterJob(job: Job, settings: Settings, profile: CandidateProfil
   }, {
     skillNames: profile.skills.map((skill) => skill.name),
     targetTitles: profile.targetTitles,
+    families: candidateFamilies(profile),
   });
 }
 

@@ -95,6 +95,15 @@ export const CHATBOT_CLOSING_TEXTS = [
   'your application has been', 'all the best', 'thank you for sharing', 'thanks for sharing',
 ];
 
+/**
+ * "Thank you for your responses." is Naukri's goodbye, not a question: it submits the application by itself.
+ * Answering it sends an unexpected extra reply and Naukri refuses the application (code 406).
+ */
+export function isClosingMessage(text: string): boolean {
+  const lower = text.toLowerCase().trim();
+  return CHATBOT_CLOSING_TEXTS.some((closing) => lower.startsWith(closing) || (lower.includes(closing) && !lower.includes('?')));
+}
+
 /** Chatbot messages that START the conversation (not questions) - never answer these, wait for the first question. */
 export const CHATBOT_INTRO_TEXTS = [
   'thank you for showing interest', 'thanks for showing interest', 'kindly answer all', 'please answer all',

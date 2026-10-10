@@ -25,10 +25,14 @@ const personalSchema = {
   currentCtcLpa: z.number().nullable(),
   expectedCtcLpa: z.number().nullable(),
   noticePeriodDays: z.number().nullable(),
+  // Optional: only profiles with a "Personal details" section have them.
+  dateOfBirth: z.string().nullable().default(null),
+  gender: z.string().nullable().default(null),
 };
 const personalResponse = {
   phone: nullableString, currentLocation: nullableString, totalExperienceYears: nullableNumber,
   currentCtcLpa: nullableNumber, expectedCtcLpa: nullableNumber, noticePeriodDays: nullableNumber,
+  dateOfBirth: nullableString, gender: nullableString,
 };
 
 // ---------------- P1: resume parser ----------------
@@ -58,6 +62,7 @@ export function resumeParserPrompt(resumeText: string): GeminiPrompt<ParsedResum
 - name, email, phone, currentLocation (city), currentTitle
 - totalExperienceYears (number, computed from employment dates if not stated)
 - currentCtcLpa, expectedCtcLpa, noticePeriodDays (usually NOT in a resume - then null). ${CTC_RULES}
+- dateOfBirth (as written, e.g. "12 Mar 2001"), gender - only if the resume states them, else null
 - skills: list of {name, years|null} - technical and domain skills only, most important first, max 40.
   years only when the resume states it ("5 years of Java"); otherwise null (it is computed from workHistory).
   Use the common name ("React", not "React.js Library"); one entry per skill.
@@ -115,6 +120,7 @@ export function naukriProfileParserPrompt(profilePageText: string, site: 'Naukri
 - headline (resume headline), phone, currentLocation, preferredLocations
 - totalExperienceYears ("4 Years 6 Months" -> 4.5)
 - currentCtcLpa, expectedCtcLpa, noticePeriodDays. ${CTC_RULES}
+- dateOfBirth (as written, e.g. "12 Mar 2001") and gender, from the "Personal details" section
 - skills: key skills and IT skills, as {name, years|null} (years from the IT skills table if shown)
 
 NAUKRI PROFILE PAGE TEXT:

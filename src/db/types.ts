@@ -20,6 +20,8 @@ export interface Facts {
   expectedCtcLpa?: number;
   noticePeriodDays?: number;
   willingToRelocate?: boolean;
+  dateOfBirth?: string;  // as written on the resume / profile, e.g. "12 Mar 2001"
+  gender?: string;
   notes?: string;
 }
 

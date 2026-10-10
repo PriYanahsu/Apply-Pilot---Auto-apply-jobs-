@@ -24,6 +24,8 @@ const ROWS: { key: FactKey; label: string; kind: 'text' | 'number' | 'yesno' | '
   { key: 'expectedCtcLpa', label: 'Expected CTC (LPA)', kind: 'number' },
   { key: 'noticePeriodDays', label: 'Notice period (days)', kind: 'number' },
   { key: 'willingToRelocate', label: 'Willing to relocate', kind: 'yesno' },
+  { key: 'dateOfBirth', label: 'Date of birth', kind: 'text' },
+  { key: 'gender', label: 'Gender', kind: 'text' },
   { key: 'notes', label: 'Other notes', kind: 'text' },
 ];
 
