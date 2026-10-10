@@ -7,7 +7,7 @@
  */
 import { FUZZY_QUESTION_MATCH_THRESHOLD } from '../config';
 import type { CandidateProfile, Facts, SavedAnswer } from '../db/types';
-import { normalizeSkill } from './skillSynonyms';
+import { SKILL_SYNONYMS, normalizeSkill } from './skillSynonyms';
 
 /** The memory key for a question: lowercase words only. */
 export function normalizeQuestion(question: string): string {
@@ -51,11 +51,22 @@ function formatOptional(value: number | undefined): string | null {
   return value === undefined ? null : formatNumber(value);
 }
 
+function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function yearsForSkillQuestion(question: string, profile: CandidateProfile, facts: Facts): string | null {
   const lower = question.toLowerCase();
-  for (const skill of profile.skills) {
+  // "Do you have experience in Java?" is a yes/no question, not a number: leave it to Gemini.
+  if (!/\byears?\b|\byrs?\b|how (many|much|long)/.test(lower)) return null;
+  const cleanQuestion = ` ${lower.replace(/[^a-z0-9.#+/ ]+/g, ' ').replace(/\s+/g, ' ')} `;
+  // Longest names first, so "React Native" wins over "React"; whole words only, so "Go" doesn't match "good".
+  const skills = [...profile.skills].sort((left, right) => right.name.length - left.name.length);
+  for (const skill of skills) {
     const skillName = normalizeSkill(skill.name);
-    if (skillName.length < 2 || !normalizeSkill(lower).includes(skillName)) continue;
+    if (skillName.length < 2) continue;
+    const spellings = [skillName, skill.name.toLowerCase(), ...Object.keys(SKILL_SYNONYMS).filter((variant) => SKILL_SYNONYMS[variant] === skillName)];
+    if (!spellings.some((spelling) => new RegExp(`[^a-z0-9+#]${escapeRegex(spelling)}[^a-z0-9+#]`).test(cleanQuestion))) continue;
     // Without a per-skill number we can't be sure, so we fall through to Gemini / needs_review.
     return skill.years !== undefined ? formatNumber(skill.years) : null;
   }

@@ -13,8 +13,9 @@ import { askGemini } from '../ai/gemini';
 import { naukriProfileParserPrompt, resumeParserPrompt, type ParsedNaukriProfile, type ParsedResume } from '../ai/profilePrompts';
 import { NAUKRI_PROFILE_URL } from '../config';
 import { db, getSettings, saveSettings } from '../db/database';
-import type { CandidateProfile, FactSource, Facts, ProfileConflict, Skill } from '../db/types';
+import type { CandidateProfile, FactSource, Facts, ProfileConflict, Skill, WorkEntry } from '../db/types';
 import { normalizeSkill } from '../matching/skillSynonyms';
+import { fillSkillYears } from '../matching/workHistory';
 import { isLoginUrl, navigateWorkerTab, sendToContent } from '../orchestrator/workerTab';
 import { makeError } from '../shared/errors';
 import { log } from '../shared/log';
@@ -44,7 +45,11 @@ export async function buildProfile(): Promise<CandidateProfile> {
 export function mergeSkills(resumeSkills: ParsedResume['skills'], naukriSkills: { name: string; years?: number | null }[]): Skill[] {
   const merged = new Map<string, Skill>();
   for (const skill of resumeSkills) {
-    merged.set(normalizeSkill(skill.name), { name: skill.name, years: skill.years ?? undefined, source: 'resume' });
+    const key = normalizeSkill(skill.name);
+    const existing = merged.get(key);
+    // First mention keeps its name and order; a later one only fills a missing number.
+    if (existing) existing.years ??= skill.years ?? undefined;
+    else if (key) merged.set(key, { name: skill.name, years: skill.years ?? undefined, source: 'resume' });
   }
   for (const skill of naukriSkills) {
     const key = normalizeSkill(skill.name);
@@ -95,20 +100,32 @@ function findConflicts(resume: ParsedResume, naukri: ParsedNaukriProfile): Profi
   return conflicts;
 }
 
+/** The parser's work history without nulls; skills used in a job are also added to the skill list. */
+export function toWorkHistory(resume: ParsedResume): WorkEntry[] {
+  return resume.workHistory.map((entry) => ({
+    title: entry.title, company: entry.company, start: entry.start ?? undefined, end: entry.end ?? undefined, skills: entry.skills,
+  }));
+}
+
 export function mergeProfile(resume: ParsedResume, naukri: ParsedNaukriProfile, scraped: NaukriProfile, resumeText: string): CandidateProfile {
   const currentTitle = resume.currentTitle ?? naukri.headline ?? scraped.headline;
   const naukriSkills = [...naukri.skills, ...scraped.itSkills, ...scraped.keySkills.map((name) => ({ name, years: undefined }))];
   const { autoFacts, factSources } = mergeFacts(resume, naukri, scraped);
+  const workHistory = toWorkHistory(resume);
+  // Skills named only inside a job's bullets still count as resume skills.
+  const skillsFromJobs = workHistory.flatMap((entry) => entry.skills).map((name) => ({ name, years: null }));
   return {
     id: 'main',
     name: autoFacts.fullName ?? '',
     summary: resume.summary,
     currentTitle,
     totalExperienceYears: autoFacts.totalExperienceYears ?? 0,
-    skills: mergeSkills(resume.skills, naukriSkills),
+    skills: fillSkillYears(mergeSkills([...resume.skills, ...skillsFromJobs], naukriSkills), workHistory),
     preferredLocations: naukri.preferredLocations,
     targetTitles: Array.from(new Set([...resume.targetTitles, currentTitle].filter(Boolean))),
     searchKeywords: resume.searchKeywords,
+    workHistory,
+    domains: resume.domains,
     resumeText,
     naukriProfileText: scraped.fullText,
     conflicts: findConflicts(resume, naukri),

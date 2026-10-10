@@ -137,4 +137,5 @@ export const DEFAULT_SETTINGS: Settings = {
   // LinkedIn restricts accounts that look automated: Test mode on, small caps, slow pacing (see LINKEDIN_* below).
   linkedin: { dryRun: true, minScore: 60, maxNewJobsPerRun: 50, maxAppliesPerRun: 10, dailyCap: 25, easyApplyOnly: false },
   factOverrides: {},
+  profileEdits: { addedSkills: [], removedSkills: [] },
 };

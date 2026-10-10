@@ -68,12 +68,30 @@ export interface Settings {
   naukriLimitHitDate?: string; // 'YYYY-MM-DD' when Naukri said "daily apply limit reached"
   resumeText?: string;
   resumeFileName?: string;
+  // Your corrections to what the AI read from your resume. They survive every profile re-read.
+  profileEdits: ProfileEdits;
+}
+
+/** Skills / target roles you added or removed in Setup. Applied on top of the AI-read profile (db/database.ts). */
+export interface ProfileEdits {
+  targetTitles?: string[];  // set = replaces the AI's list
+  addedSkills: string[];
+  removedSkills: string[];  // normalized skill names
 }
 
 export interface Skill {
   name: string;
   years?: number;
-  source: 'resume' | 'naukri' | 'linkedin' | 'both';
+  source: 'resume' | 'naukri' | 'linkedin' | 'both' | 'you';
+}
+
+/** One job from the resume's work history. Dates are 'YYYY-MM'; end 'present' = current job. */
+export interface WorkEntry {
+  title: string;
+  company: string;
+  start?: string;
+  end?: string;
+  skills: string[];  // skills the resume says were used in this job
 }
 
 export interface ProfileConflict {
@@ -92,6 +110,8 @@ export interface CandidateProfile {
   preferredLocations: string[];
   targetTitles: string[];
   searchKeywords: string[];
+  workHistory?: WorkEntry[];  // from the resume; gives per-skill years and context for scoring / answers
+  domains?: string[];         // industries / domains worked in (e.g. fintech, e-commerce)
   resumeText: string;
   naukriProfileText: string;
   conflicts: ProfileConflict[];
@@ -149,6 +169,8 @@ export interface Job {
   dealBreaker?: boolean;
   matchReason?: string;
   missingSkills?: string[];
+  matchedSkills?: string[];              // job skills you have (shown under "Why this score")
+  experienceFit?: number;                // 0..1, how well your years fit the job's range (undefined = unknown)
   preferredSkills?: string[];            // key skills Naukri marks as preferred
   naukriMatch?: Record<string, boolean>; // Naukri's own match check: keyskills / location / work experience
   status: JobStatus;

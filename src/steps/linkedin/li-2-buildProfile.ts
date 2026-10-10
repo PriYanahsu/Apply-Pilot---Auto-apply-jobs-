@@ -8,14 +8,15 @@
 import { askGemini } from '../../ai/gemini';
 import { naukriProfileParserPrompt, resumeParserPrompt } from '../../ai/profilePrompts';
 import { LINKEDIN_LOGIN_URL_MARKERS, LINKEDIN_MY_PROFILE_URL } from '../../config';
-import { db, getProfile, getSettings, saveSettings } from '../../db/database';
+import { db, getSettings, saveSettings } from '../../db/database';
 import type { CandidateProfile, FactSource, Facts, LinkedInProfileData, Skill } from '../../db/types';
 import { normalizeSkill } from '../../matching/skillSynonyms';
 import { navigateWorkerTab, sendToContent } from '../../orchestrator/workerTab';
 import { makeError } from '../../shared/errors';
 import { log } from '../../shared/log';
 import { linkedInProfilePageSchema, type NaukriProfile } from '../../shared/messages';
-import { mergeFacts, mergeProfile } from '../2-buildProfile';
+import { mergeFacts, mergeProfile, toWorkHistory } from '../2-buildProfile';
+import { fillSkillYears } from '../../matching/workHistory';
 
 /** Adds LinkedIn skills you don't already have (from resume / Naukri) to the skill list. */
 function addLinkedInSkills(skills: Skill[], linkedInSkills: { name: string; years: number | null }[]): Skill[] {
@@ -50,9 +51,12 @@ export async function buildLinkedInProfile(): Promise<CandidateProfile> {
     headline: parsed.headline ?? page.headline, syncedAt: new Date().toISOString(),
   };
 
-  const existing = await getProfile();
+  const existing = await db.profile.get('main'); // raw: your Setup edits stay separate (see getProfile)
   const base = existing ?? { ...mergeProfile(resume, parsed, pageStub, settings.resumeText), naukriProfileText: '', naukriSyncedAt: undefined, autoFacts, factSources: asLinkedInSources(factSources) };
-  const profile: CandidateProfile = { ...base, skills: addLinkedInSkills(base.skills, parsed.skills), linkedin, updatedAt: new Date().toISOString() };
+  // The resume was just re-read: keep its newest work history (and the per-skill years it gives).
+  const workHistory = toWorkHistory(resume);
+  const skills = fillSkillYears(addLinkedInSkills(base.skills, parsed.skills), workHistory);
+  const profile: CandidateProfile = { ...base, skills, workHistory, domains: resume.domains, linkedin, updatedAt: new Date().toISOString() };
   await db.profile.put(profile);
   if (settings.keywords.length === 0) await saveSettings({ keywords: resume.searchKeywords });
   await log('li-2-profile', `LinkedIn profile saved: ${Object.keys(autoFacts).length} details known, ${parsed.skills.length} skills on LinkedIn`, { data: linkedin.factSources });

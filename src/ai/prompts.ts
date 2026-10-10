@@ -9,6 +9,7 @@
 import { z } from 'zod';
 import { JOB_DESCRIPTION_CHARS_FOR_SCORING, RESUME_CHARS_FOR_ANSWERS } from '../config';
 import type { CandidateProfile, Facts, Job } from '../db/types';
+import { workHistoryText } from '../matching/workHistory';
 import type { GeminiPrompt } from './gemini';
 
 // ---------------- P2: job match scorer ----------------
@@ -18,12 +19,24 @@ const scoreItemSchema = z.object({
   dealBreaker: z.boolean(),
   reason: z.string(),
   missingSkills: z.array(z.string()),
+  matchedSkills: z.array(z.string()).default([]),
 });
 const scoreListSchema = z.array(scoreItemSchema);
 export type JobScore = z.infer<typeof scoreItemSchema>;
 
 function profileSkillsText(profile: CandidateProfile): string {
-  return profile.skills.map((skill) => (skill.years !== undefined ? `${skill.name} (${skill.years})` : skill.name)).join(', ');
+  return profile.skills.map((skill) => (skill.years !== undefined ? `${skill.name} (${skill.years}y)` : skill.name)).join(', ');
+}
+
+/** The candidate block shared by the scorer and the answerer. */
+function candidateText(profile: CandidateProfile): string {
+  return `${profile.summary}
+Current title: ${profile.currentTitle} | Total experience: ${profile.totalExperienceYears} yrs
+Skills (years of use where known): ${profileSkillsText(profile)}
+Work history (newest first):
+${workHistoryText(profile.workHistory)}
+Domains: ${(profile.domains ?? []).join(', ') || 'not stated'}
+Target titles: ${profile.targetTitles.join(', ')}`;
 }
 
 export function jobScorerPrompt(profile: CandidateProfile, jobs: Job[]): GeminiPrompt<JobScore[]> {
@@ -34,38 +47,54 @@ export function jobScorerPrompt(profile: CandidateProfile, jobs: Job[]): GeminiP
   }));
   return {
     promptName: 'P2-score',
-    system: `You are a strict technical recruiter. You score how well a candidate fits each job.
-Score honestly; a wrong application wastes the candidate's daily limit.
+    system: `You are a strict technical recruiter. You score how well a candidate fits each job, using ONLY evidence
+in the candidate's profile. Score honestly; a wrong application wastes the candidate's daily limit and reputation.
+
+Work through each job in this order (silently):
+1. ROLE: is this the same kind of role as the candidate's work history / target titles? (e.g. frontend vs backend,
+   developer vs tester vs sales vs support). A different role family scores 0-40 even if a few keywords overlap.
+2. MUST-HAVES: the skills the job requires - words like "must", "required", "mandatory", "strong", "hands-on",
+   the first skills listed, and "preferredSkills" (Naukri's own must-have tags). Nice-to-haves are "good to have",
+   "plus", "bonus", "preferred but not required".
+3. EVIDENCE for each must-have: strong = used in a job in the work history (years shown); weak = only listed in
+   skills; none = absent. Treat close equivalents as a match (React/React.js, Postgres/PostgreSQL, AWS/cloud
+   when the job says "any cloud"), but NOT different tools (Angular is not React, Java is not JavaScript).
+4. SENIORITY: compare the job's experience range with the candidate's total years and the level of the title
+   (lead / architect / manager roles need that level in the work history).
 
 Scoring guide:
-90-100 = core skills and seniority match, candidate would be shortlisted
-70-89  = strong match, 1-2 minor gaps
-50-69  = partial match, notable gaps
-0-49   = poor fit or different role/domain
-"preferredSkills" are the job's must-have skills; missing several of them is a notable gap.
+90-100 = same role, every must-have with strong evidence, seniority fits - would surely be shortlisted
+75-89  = same role, must-haves covered (at most one weak), only nice-to-haves missing
+60-74  = same role, one must-have missing or several only weak
+40-59  = related role or two+ must-haves missing
+0-39   = different role / domain, or most must-haves missing
 "naukriMatchScore" is Naukri's own check of this candidate (true = match, false = no match) - weigh it.
-Set dealBreaker=true if the job hard-requires something the candidate clearly lacks
-(mandatory degree/certification, very different domain, seniority off by > 3 years, specific clearance).`,
-    user: `CANDIDATE PROFILE:
-${profile.summary}
-Title: ${profile.currentTitle} | Experience: ${profile.totalExperienceYears} yrs
-Skills: ${profileSkillsText(profile)}
-Target titles: ${profile.targetTitles.join(', ')}
+Set dealBreaker=true if the job hard-requires something the candidate clearly lacks (mandatory degree or
+certification, a core must-have skill with no evidence at all, a different role family, seniority off by > 3 years,
+a specific clearance / language / visa).
+
+"matchedSkills": the job's important skills the candidate HAS (job's wording, max 8).
+"missingSkills": the job's must-haves the candidate does NOT have (max 6). Never list a skill that appears in the
+candidate's skills or work history under any spelling.
+"reason": <= 20 words, concrete, e.g. "Frontend role; React 3y and TypeScript match; lacks GraphQL (must-have)".`,
+    user: `CANDIDATE:
+${candidateText(profile)}
 
 JOBS (JSON):
 ${JSON.stringify(jobsJson)}
 
-Return JSON: [{ "jobId": string, "score": int, "dealBreaker": boolean,
-               "reason": "<= 20 words, concrete", "missingSkills": string[] }]`,
+Return JSON: [{ "jobId": string, "score": int, "dealBreaker": boolean, "reason": string,
+               "matchedSkills": string[], "missingSkills": string[] }]`,
     responseSchema: {
       type: 'ARRAY',
       items: {
         type: 'OBJECT',
         properties: {
           jobId: { type: 'STRING' }, score: { type: 'INTEGER' }, dealBreaker: { type: 'BOOLEAN' },
-          reason: { type: 'STRING' }, missingSkills: { type: 'ARRAY', items: { type: 'STRING' } },
+          reason: { type: 'STRING' }, matchedSkills: { type: 'ARRAY', items: { type: 'STRING' } },
+          missingSkills: { type: 'ARRAY', items: { type: 'STRING' } },
         },
-        required: ['jobId', 'score', 'dealBreaker', 'reason', 'missingSkills'],
+        required: ['jobId', 'score', 'dealBreaker', 'reason', 'matchedSkills', 'missingSkills'],
       },
     },
     zodSchema: scoreListSchema,
@@ -115,8 +144,8 @@ Formatting rules:
 
 How to answer common question types (confidence >= 0.8 when you follow these):
 - "Do you have experience in X?" -> "Yes" if X (or a close synonym) is in the skills or resume, else "No".
-- "Years of experience in X?" -> estimate from the resume's employment dates in the jobs where X was used
-  (round to whole or .5 years). If X is not in the resume or skills at all, answer "0".
+- "Years of experience in X?" -> use X's years in PROFILE SKILLS when shown; otherwise add up the WORK HISTORY
+  jobs where X was used (round to whole or .5 years). If X is not in the resume or skills at all, answer "0".
 - Total experience, CTC, notice period, location, phone, email -> from CANDIDATE FACTS.
 - Degree / graduation year / college questions -> from the resume's education section only.
 - OPTION questions (chips / radio / dropdown): ALWAYS pick the option that best matches the candidate's resume,
@@ -130,7 +159,9 @@ ${input.autoAnswerPreferences ? '- Willingness / preference questions (relocate,
   never invent those. Everything else must be answered.`,
     user: `CANDIDATE FACTS:
 ${JSON.stringify(input.facts)}
-PROFILE SKILLS: ${profileSkillsText(input.profile)}
+PROFILE SKILLS (years of use where known): ${profileSkillsText(input.profile)}
+WORK HISTORY (newest first):
+${workHistoryText(input.profile.workHistory)}
 RESUME (excerpt): ${input.profile.resumeText.slice(0, RESUME_CHARS_FOR_ANSWERS)}
 ${input.profileSite ?? 'NAUKRI'} PROFILE (excerpt): ${(input.profileText ?? input.profile.naukriProfileText).slice(0, RESUME_CHARS_FOR_ANSWERS)}
 JOB: ${input.jobTitle} at ${input.company}

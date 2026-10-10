@@ -3,6 +3,7 @@
  * WHAT: One job as a card: match score, title, company, location, age, status, why, missing skills, actions.
  * CALLED BY: tabs/JobsTab.tsx
  */
+import { AI_SCORE_WEIGHT, RULE_SCORE_WEIGHT } from '../../../../config';
 import { updateJob } from '../../../../db/database';
 import type { Job } from '../../../../db/types';
 import { Icon } from '../../icons';
@@ -16,6 +17,33 @@ function reasonFor(job: Job): { text: string; tone: string } | null {
   if (job.matchReason) return { text: job.matchReason, tone: 'text-slate-600' };
   if (job.filterReason) return { text: job.filterReason, tone: 'text-slate-500' };
   return null;
+}
+
+function SkillChips({ label, skills, className }: { label: string; skills?: string[]; className: string }) {
+  if (!skills || skills.length === 0) return null;
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-1">
+      <span className="text-[10px] text-slate-500">{label}:</span>
+      {skills.slice(0, 8).map((skill) => <span key={skill} className={`rounded px-1.5 py-px text-[10px] ${className}`}>{skill}</span>)}
+    </div>
+  );
+}
+
+/** How the match score was made, in plain words. */
+function ScoreBreakdown({ job }: { job: Job }) {
+  const fit = job.experienceFit;
+  const fitText = fit === undefined ? 'not stated by the job' : fit >= 1 ? 'fits' : fit >= 0.5 ? 'slightly outside the range' : 'far outside the range';
+  return (
+    <details className="mt-1.5 text-[11px] text-slate-500">
+      <summary className="cursor-pointer select-none hover:text-slate-800">Why {job.finalScore}?</summary>
+      <ul className="mt-1 space-y-0.5 pl-1">
+        <li>AI recruiter review: <b className="text-slate-700">{job.aiScore ?? '–'}</b>/100 (role, must-have skills, seniority) · counts {Math.round(AI_SCORE_WEIGHT * 100)}%</li>
+        <li>Keyword check: <b className="text-slate-700">{job.ruleScore ?? '–'}</b>/100 (skills, title, experience) · counts {Math.round(RULE_SCORE_WEIGHT * 100)}%</li>
+        <li>Your experience vs "{job.experienceText || 'not stated'}": {fitText}</li>
+      </ul>
+      <p className="mt-1 text-[10px] text-slate-400">Wrong? Fix your target roles and skills in Setup → Resume & profile. New jobs are scored with your changes.</p>
+    </details>
+  );
 }
 
 export default function JobCard({ job, onApplyNow }: { job: Job; onApplyNow: () => void }) {
@@ -40,12 +68,10 @@ export default function JobCard({ job, onApplyNow }: { job: Job; onApplyNow: () 
       </div>
 
       {reason && <p className={`mt-2 text-xs leading-snug ${reason.tone}`}>{reason.text}</p>}
-      {job.missingSkills && job.missingSkills.length > 0 && (
-        <div className="mt-1.5 flex flex-wrap gap-1">
-          <span className="text-[10px] text-slate-500">Missing:</span>
-          {job.missingSkills.slice(0, 6).map((skill) => <span key={skill} className="rounded bg-amber-50 px-1.5 py-px text-[10px] text-amber-800">{skill}</span>)}
-        </div>
-      )}
+      {job.dealBreaker && <p className="mt-1 text-[11px] font-medium text-red-600">Deal-breaker: the job needs something your resume doesn't show, so the score is capped.</p>}
+      <SkillChips label="You have" skills={job.matchedSkills} className="bg-emerald-50 text-emerald-800" />
+      <SkillChips label="Missing" skills={job.missingSkills} className="bg-amber-50 text-amber-800" />
+      {job.finalScore !== undefined && <ScoreBreakdown job={job} />}
       {job.appliedAt && job.status === 'applied' && <p className="mt-1.5 text-[11px] text-emerald-700">Applied {new Date(job.appliedAt).toLocaleString()}</p>}
 
       {job.status === 'external' && (

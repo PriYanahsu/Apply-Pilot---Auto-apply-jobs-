@@ -71,15 +71,19 @@ Your key stays only in your own Chrome and is sent only to Google.
    - If your resume is a scanned image, click **paste text instead** and paste your resume text.
 4. Click **Read my Naukri profile**.
 5. Wait about a minute. ApplyPilot reads your resume first, then fills in missing details (salary, notice period, and so on) from your Naukri profile. It **never changes** your Naukri profile.
-6. Look at the summary under **Your details**. Only change something if it's wrong.
-7. Check **Keywords** (the job titles to search for, e.g. `React Developer, Frontend Developer`) and **Locations** (e.g. `Bangalore, Pune`).
-8. Click **Save settings**.
+6. **Check your target roles and skills** (they decide which jobs match you):
+   - **Target roles:** the job titles you want, e.g. `Frontend Developer, React Developer`.
+   - **Skills:** click **×** on a wrong skill, or type a missing one and click **Add**. The small "3y" shows how many years you used a skill, worked out from the dates in your resume.
+   - These changes save instantly and are kept when your profile is re-read.
+7. Look at the summary under **Your details**. Only change something if it's wrong.
+8. Check **Job titles to search for** (e.g. `React Developer, Frontend Developer`; click a suggestion to add it) and **Cities** (e.g. `Bangalore, Pune`).
+9. Click **Save settings**. A yellow "You have unsaved changes" note reminds you if you forget.
 
 ## Step 6: Find and apply to jobs
 
 1. Open the **Run** tab.
 2. Click **Find only**. ApplyPilot searches for fresh jobs and scores them against your resume. Nothing is applied yet.
-3. Open the **Jobs** tab to see what it found and each job's match score.
+3. Open the **Jobs** tab to see what it found and each job's match score. Each card shows the skills you **have** (green) and are **missing** (amber); click **Why?** to see how the score was made.
 4. Back in **Run**, click **Find & Apply**.
    - You're still in **Test mode**, so it only *pretends* to apply. The log shows "WOULD APPLY" for each job it would have applied to.
 5. When the results look right, turn on the **Test mode** switch at the top of **Run**. The badge changes to **Live**, and real applications start.
@@ -98,6 +102,14 @@ Your key stays only in your own Chrome and is sent only to Google.
 | **Pause / Resume / Stop** | Controls a run while it's going |
 | **Start fresh** | Clears today's searches so you can search again |
 | Header dropdown | Switches between **Naukri** and **LinkedIn** |
+
+## How matching works
+
+Each job gets a score from 0 to 100:
+
+- **AI recruiter review (65%)**: Gemini checks the role type, the job's **must-have** skills against the evidence in your work history (where and how long you used each one), and your seniority. A missing core requirement is a **deal-breaker** and caps the score at 40.
+- **Keyword check (35%)**: your skills vs the job's skills (read from the description when the job has no skill tags), the job title vs your target roles, and your years vs the job's experience range.
+- Skills the AI calls "missing" but you actually have under another spelling (ReactJS / React) are removed automatically.
 
 ## Good to know
 

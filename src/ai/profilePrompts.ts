@@ -41,6 +41,11 @@ const resumeSchema = z.object({
   targetTitles: z.array(z.string()),
   searchKeywords: z.array(z.string()),
   education: z.array(z.object({ degree: z.string(), field: z.string().nullable(), year: z.number().nullable() })),
+  // Optional so an older / smaller model that leaves them out still works.
+  workHistory: z.array(z.object({
+    title: z.string(), company: z.string(), start: z.string().nullable(), end: z.string().nullable(), skills: z.array(z.string()),
+  })).default([]),
+  domains: z.array(z.string()).default([]),
   summary: z.string(),
 });
 export type ParsedResume = z.infer<typeof resumeSchema>;
@@ -53,9 +58,16 @@ export function resumeParserPrompt(resumeText: string): GeminiPrompt<ParsedResum
 - name, email, phone, currentLocation (city), currentTitle
 - totalExperienceYears (number, computed from employment dates if not stated)
 - currentCtcLpa, expectedCtcLpa, noticePeriodDays (usually NOT in a resume - then null). ${CTC_RULES}
-- skills: list of {name, years|null} - technical and domain skills only, most important first, max 30
-- targetTitles: 3-5 job titles this person is realistically qualified for today
-- searchKeywords: 3-5 Naukri search phrases (2-3 words each)
+- skills: list of {name, years|null} - technical and domain skills only, most important first, max 40.
+  years only when the resume states it ("5 years of Java"); otherwise null (it is computed from workHistory).
+  Use the common name ("React", not "React.js Library"); one entry per skill.
+- workHistory: every job, newest first: {title, company, start "YYYY-MM"|null, end "YYYY-MM"|"present"|null,
+  skills: the skills/tools the resume says were used IN THAT JOB (from its bullets / tech stack)}.
+  Internships count. A month that is not written -> use "-01" (e.g. "2021" -> "2021-01").
+- domains: industries / business domains worked in (e.g. "Fintech", "E-commerce", "Healthcare"), max 5
+- targetTitles: 3-5 job titles this person is realistically qualified for today, matching their seniority
+  (e.g. 1 yr experience -> no "Senior" / "Lead" titles)
+- searchKeywords: 3-5 job-board search phrases (2-3 words each), the role names recruiters actually post
 - education: list of {degree, field, year|null}
 - summary: 3 factual sentences
 
@@ -69,9 +81,18 @@ RESUME:
         targetTitles: { type: 'ARRAY', items: { type: 'STRING' } },
         searchKeywords: { type: 'ARRAY', items: { type: 'STRING' } },
         education: { type: 'ARRAY', items: { type: 'OBJECT', properties: { degree: { type: 'STRING' }, field: nullableString, year: nullableNumber }, required: ['degree', 'field', 'year'] } },
+        workHistory: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: { title: { type: 'STRING' }, company: { type: 'STRING' }, start: nullableString, end: nullableString, skills: { type: 'ARRAY', items: { type: 'STRING' } } },
+            required: ['title', 'company', 'start', 'end', 'skills'],
+          },
+        },
+        domains: { type: 'ARRAY', items: { type: 'STRING' } },
         summary: { type: 'STRING' },
       },
-      required: ['name', 'email', 'currentTitle', ...Object.keys(personalResponse), 'skills', 'targetTitles', 'searchKeywords', 'education', 'summary'],
+      required: ['name', 'email', 'currentTitle', ...Object.keys(personalResponse), 'skills', 'workHistory', 'domains', 'targetTitles', 'searchKeywords', 'education', 'summary'],
     },
     zodSchema: resumeSchema,
   };

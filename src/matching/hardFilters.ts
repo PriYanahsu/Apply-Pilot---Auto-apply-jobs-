@@ -5,7 +5,7 @@
  * IF IT BREAKS: wrong jobs passing/failing? The reason text is saved on job.filterReason - start there.
  */
 import { experienceFits, parseExperienceRange } from './experienceRange';
-import { skillOverlap, titleSimilarity } from './ruleScore';
+import { jobSkillsFor, skillOverlap, titleSimilarity } from './ruleScore';
 
 export interface FilterJobInput {
   title: string;
@@ -13,6 +13,7 @@ export interface FilterJobInput {
   location: string;
   experienceText: string;
   skills: string[];
+  description?: string;
 }
 
 export interface FilterSettingsInput {
@@ -71,7 +72,7 @@ export function checkHardFilters(job: FilterJobInput, settings: FilterSettingsIn
 
   if (!locationMatches(job.location, settings.locations)) return `Location "${job.location}" not in your locations`;
 
-  const overlap = skillOverlap(job.skills, profile.skillNames);
+  const overlap = skillOverlap(jobSkillsFor(job, profile.skillNames), profile.skillNames);
   const similarity = titleSimilarity(job.title, profile.targetTitles);
   if (overlap === 0 && similarity === 0) return 'No skill overlap and title shares no word with your target titles';
   return null;

@@ -32,9 +32,13 @@ describe('titleSimilarity', () => {
 });
 
 describe('scores', () => {
-  it('ruleScore = 70*overlap + 30*title', () => {
+  it('ruleScore = 55*overlap + 25*title + 20*experience fit', () => {
+    expect(computeRuleScore(['react', 'redux'], 'React Developer', ['react', 'redux'], ['React Developer'], 1)).toBe(100);
+    expect(computeRuleScore(['react', 'java'], 'Java Developer', ['react'], ['Frontend Engineer'], 0.5)).toBe(38);
+  });
+  it('without an experience range, skills and title share the full 100', () => {
     expect(computeRuleScore(['react', 'redux'], 'React Developer', ['react', 'redux'], ['React Developer'])).toBe(100);
-    expect(computeRuleScore(['react', 'java'], 'Java Developer', ['react'], ['Frontend Engineer'])).toBe(35);
+    expect(computeRuleScore(['react', 'java'], 'Java Developer', ['react'], ['Frontend Engineer'])).toBe(34);
   });
   it('finalScore = 0.35 rule + 0.65 ai, capped at 40 on deal-breaker', () => {
     expect(computeFinalScore(80, 90, false, 0.35, 0.65, 40)).toBe(87);

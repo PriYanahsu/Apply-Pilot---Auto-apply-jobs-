@@ -6,8 +6,9 @@
  */
 import Dexie, { type Table } from 'dexie';
 import { DEFAULT_SETTINGS } from '../config';
+import { normalizeSkill } from '../matching/skillSynonyms';
 import type {
-  AiCall, CandidateProfile, DebugSnapshot, Facts, Job, LogRow, Platform, Run, SavedAnswer, SearchLogEntry, Settings,
+  AiCall, CandidateProfile, DebugSnapshot, Facts, Job, LogRow, Platform, ProfileEdits, Run, SavedAnswer, SearchLogEntry, Settings,
 } from './types';
 
 // The database keeps its original name so existing data survives the rename to ApplyPilot.
@@ -62,6 +63,7 @@ export async function getSettings(): Promise<Settings> {
     factOverrides: saved?.factOverrides ?? {},
     skipWhenNaukriSaysNo: { ...DEFAULT_SETTINGS.skipWhenNaukriSaysNo, ...saved?.skipWhenNaukriSaysNo },
     linkedin: { ...DEFAULT_SETTINGS.linkedin, ...saved?.linkedin },
+    profileEdits: { ...DEFAULT_SETTINGS.profileEdits, ...saved?.profileEdits },
   };
 }
 
@@ -87,8 +89,25 @@ export function getFactSources(profile: CandidateProfile | undefined, platform: 
   return platform === 'linkedin' ? { ...profile?.factSources, ...profile?.linkedin?.factSources } : { ...profile?.linkedin?.factSources, ...profile?.factSources };
 }
 
+/** The AI-read profile with your Setup corrections on top: removed skills dropped, added skills and target roles in. */
+export function applyProfileEdits(profile: CandidateProfile, edits: ProfileEdits): CandidateProfile {
+  const removed = new Set(edits.removedSkills.map(normalizeSkill));
+  const skills = profile.skills.filter((skill) => !removed.has(normalizeSkill(skill.name)));
+  const known = new Set(skills.map((skill) => normalizeSkill(skill.name)));
+  for (const name of edits.addedSkills) {
+    const key = normalizeSkill(name);
+    if (!key || known.has(key) || removed.has(key)) continue;
+    skills.push({ name, source: 'you' });
+    known.add(key);
+  }
+  const targetTitles = edits.targetTitles && edits.targetTitles.length > 0 ? edits.targetTitles : profile.targetTitles;
+  return { ...profile, skills, targetTitles };
+}
+
+/** Your profile as every step should see it (with your corrections from Setup). */
 export async function getProfile(): Promise<CandidateProfile | undefined> {
-  return db.profile.get('main');
+  const profile = await db.profile.get('main');
+  return profile ? applyProfileEdits(profile, (await getSettings()).profileEdits) : undefined;
 }
 
 export async function updateJob(jobId: string, changes: Partial<Job>): Promise<void> {

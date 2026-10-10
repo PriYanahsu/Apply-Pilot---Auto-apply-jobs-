@@ -137,7 +137,7 @@ export default function RunTab({ goTo }: TabProps) {
           Find & Apply
         </Button>
         {settings && <RunLimits key={settings.platform} settings={settings} />}
-        {limits && <p className="mt-2 text-center text-[11px] text-slate-500">Finds up to {limits.maxNewJobsPerRun} new {siteName} jobs, reads and scores each one, then applies to every job matching {limits.minScore}% or more (up to {limits.maxAppliesPerRun} per run, {limits.dailyCap} per day).</p>}
+        {limits && <p className="mt-2 text-center text-[11px] text-slate-500">Finds up to {limits.maxNewJobsPerRun} new {siteName} jobs, reads and scores each one, then applies to every job matching {limits.minScore}% or more (up to {limits.maxAppliesPerRun} per run, {limits.dailyCap} per day). Tip: 65-75 suits most people. After "Find only", open a job's "Why?" in the Jobs tab to check the scores.</p>}
         <button
           disabled={!canStart}
           onClick={() => send({ type: 'START_BOTH' })}

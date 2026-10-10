@@ -28,7 +28,7 @@ export interface GeminiPrompt<T> {
   system: string;
   user: string;
   responseSchema: object;  // Gemini's OpenAPI-style schema (must match zodSchema)
-  zodSchema: z.ZodType<T>;
+  zodSchema: z.ZodType<T, z.ZodTypeDef, unknown>; // input is unknown: schemas may fill defaults
 }
 
 type ModelAttempt = { ok: true; text: string } | { ok: false; status: number; bodyText: string };
