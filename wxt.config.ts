@@ -18,5 +18,7 @@ export default defineConfig({
     permissions: ['storage', 'sidePanel', 'tabs', 'scripting', 'alarms', 'notifications', 'unlimitedStorage'],
     host_permissions: ['https://*.naukri.com/*', 'https://www.linkedin.com/*', 'https://generativelanguage.googleapis.com/*'],
     action: { default_title: 'Open ApplyPilot' },
+    // Lets Sarthi (voice assistant extension) start/stop runs. Same ID as config.ts ALLOWED_EXTERNAL_EXTENSION_IDS.
+    externally_connectable: { ids: ['iekojnopppjmofbmibgmdklpecpeecfo'] },
   },
 });

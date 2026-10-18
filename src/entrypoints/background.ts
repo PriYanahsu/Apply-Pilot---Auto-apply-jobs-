@@ -7,7 +7,7 @@
  */
 import { defineBackground } from 'wxt/utils/define-background';
 import { testGeminiModels } from '../ai/gemini';
-import { DAILY_RUN_ALARM_NAME, KEEP_ALIVE_ALARM_NAME, PROFILE_MAX_AGE_HOURS } from '../config';
+import { ALLOWED_EXTERNAL_EXTENSION_IDS, DAILY_RUN_ALARM_NAME, KEEP_ALIVE_ALARM_NAME, PROFILE_MAX_AGE_HOURS } from '../config';
 import { db, getProfile, getSettings, jobPlatform, updateJob } from '../db/database';
 import type { Platform, Run, StepName } from '../db/types';
 import { isExecuting, onRunFinished, runPipeline } from '../orchestrator/runPipeline';
@@ -15,13 +15,24 @@ import { createRun, getActiveRun, updateRun } from '../orchestrator/runState';
 import { clearUnfinishedWork } from '../db/exportImport';
 import { errorMessage, makeError } from '../shared/errors';
 import { log } from '../shared/log';
-import type { CommandResult, PanelCommand, RunMode } from '../shared/messages';
+import type { CommandResult, ExternalCommand, ExternalRunStatus, PanelCommand, RunMode } from '../shared/messages';
 
 export default defineBackground(() => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch((error) => console.error('[background] side panel setup failed', error));
 
   chrome.runtime.onMessage.addListener((command: PanelCommand, _sender, sendResponse) => {
     handlePanelCommand(command).then(sendResponse);
+    return true;
+  });
+
+  // Sarthi (voice assistant extension) can ask for status and start/stop/pause/resume runs.
+  // Anything from an extension that isn't allowlisted is refused.
+  chrome.runtime.onMessageExternal.addListener((command: ExternalCommand, sender, sendResponse) => {
+    if (!sender.id || !ALLOWED_EXTERNAL_EXTENSION_IDS.includes(sender.id)) {
+      sendResponse({ ok: false, error: { code: 'UNKNOWN', message: 'This extension is not allowed to control ApplyPilot' } });
+      return false;
+    }
+    handleExternalCommand(command).then(sendResponse);
     return true;
   });
 
@@ -59,6 +70,46 @@ async function runPanelCommand(command: PanelCommand): Promise<unknown> {
     case 'UPDATE_DAILY_ALARM': return updateDailyAlarm();
     case 'START_FRESH': return startFresh(command.platform);
   }
+}
+
+async function handleExternalCommand(command: ExternalCommand): Promise<CommandResult<unknown>> {
+  try {
+    if (command.type !== 'STATUS') await log('background', `External command from Sarthi: ${command.type}`);
+    return { ok: true, data: await runExternalCommand(command) };
+  } catch (error) {
+    await log('background', `External ${command.type} failed: ${errorMessage(error)}`, { level: 'error' });
+    return { ok: false, error: { code: 'UNKNOWN', message: errorMessage(error) } };
+  }
+}
+
+async function runExternalCommand(command: ExternalCommand): Promise<unknown> {
+  switch (command.type) {
+    case 'STATUS': return runStatus();
+    case 'START_RUN': {
+      if (!['full', 'find', 'apply'].includes(command.mode)) throw makeError('UNKNOWN', `Unknown mode ${command.mode}`);
+      const runId = command.platform
+        ? await startNewRun(command.mode, await stepsForMode(command.mode, command.platform), { platform: command.platform })
+        : await startRun(command.mode);
+      return runStatus(runId);
+    }
+    case 'STOP_RUN': await stopRun(); return runStatus();
+    case 'PAUSE_RUN': await pauseRun(); return runStatus();
+    case 'RESUME_RUN': await resumeRun(); return runStatus();
+    default: throw makeError('UNKNOWN', 'Unknown command');
+  }
+}
+
+/** The active run (or a given / the latest one) in a shape another extension can read out loud. */
+async function runStatus(runId?: number): Promise<ExternalRunStatus> {
+  const run = runId ? await db.runs.get(runId) : (await getActiveRun()) ?? (await db.runs.orderBy('id').last());
+  if (!run) return { active: false };
+  return {
+    active: run.state === 'running' || run.state === 'paused',
+    runId: run.id, state: run.state, platform: run.platform ?? 'naukri', mode: run.mode,
+    step: run.steps[run.stepIndex] ?? 'finished', stepNumber: `${Math.min(run.stepIndex + 1, run.steps.length)}/${run.steps.length}`,
+    counters: run.counters, pauseReason: run.pauseReason, waitingReason: run.waitingReason, error: run.error,
+    startedAt: run.startedAt, finishedAt: run.finishedAt,
+  };
 }
 
 /** Read resume + Naukri profile first when we have none, or it is older than PROFILE_MAX_AGE_HOURS. */

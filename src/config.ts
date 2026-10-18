@@ -13,6 +13,10 @@ export const NAUKRI_LOGIN_URL = 'https://www.naukri.com/nlogin/login';
 // If the worker tab lands on a URL containing one of these, the user is not logged in.
 export const NAUKRI_LOGIN_URL_MARKERS = ['/nlogin', '/login', 'login.naukri'];
 
+// Other extensions allowed to start/stop runs by message (Sarthi, the voice browser assistant).
+// Sarthi's manifest has a fixed "key", so this ID never changes. Must match wxt.config.ts externally_connectable.
+export const ALLOWED_EXTERNAL_EXTENSION_IDS = ['iekojnopppjmofbmibgmdklpecpeecfo'];
+
 export const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 export const GEMINI_TEMPERATURE = 0.2;
 export const GEMINI_TIMEOUT_MS = 30_000;

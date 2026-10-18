@@ -6,7 +6,7 @@
  * IF IT BREAKS: a "Bad reply" error means the content script returned a shape that doesn't match below.
  */
 import { z } from 'zod';
-import type { Platform, StepName } from '../db/types';
+import type { Platform, Run, StepName } from '../db/types';
 import type { AppErrorCode } from './errors';
 
 // ---------- Errors ----------
@@ -182,6 +182,31 @@ export type PanelCommand =
   | { type: 'TEST_GEMINI'; apiKey: string; models: string[] }
   | { type: 'UPDATE_DAILY_ALARM' }
   | { type: 'START_FRESH'; platform: Platform };
+
+// ---------- Other extensions (Sarthi voice assistant) -> background ----------
+// A small, safe subset of PanelCommand. Only allowlisted extension IDs are accepted (config.ts).
+export type ExternalCommand =
+  | { type: 'STATUS' }
+  | { type: 'START_RUN'; mode: RunMode; platform?: Platform }
+  | { type: 'STOP_RUN' }
+  | { type: 'PAUSE_RUN' }
+  | { type: 'RESUME_RUN' };
+
+export interface ExternalRunStatus {
+  active: boolean;
+  runId?: number;
+  state?: string;
+  platform?: Platform;
+  mode?: string;
+  step?: string;
+  stepNumber?: string;
+  counters?: Run['counters'];
+  pauseReason?: string;
+  waitingReason?: string;
+  error?: string;
+  startedAt?: string;
+  finishedAt?: string;
+}
 
 /** Side panel helper: send a command to the background and unwrap the result. */
 export async function sendToBackground<T = unknown>(command: PanelCommand): Promise<T> {
