@@ -26,13 +26,13 @@ export async function queueLinkedInJobs(runId: number): Promise<void> {
   if (run.targetJobId) return;
 
   const today = todayDateString();
-  const waiting = (await db.jobs.where('status').equals('needs_review').toArray()).filter((job) => isLinkedIn(job) && job.autoRetryDate !== today);
+  const waiting = (await db.jobs.where('status').equals('needs_review').toArray()).filter((job) => isLinkedIn(job) && !job.companySite && job.autoRetryDate !== today);
   for (const job of waiting) await updateJob(job.jobId, { status: 'queued', autoRetryDate: today, lastDryRunId: undefined, pendingQuestion: undefined });
 
   const appliedToday = await countAppliedToday('linkedin');
   const room = Math.max(0, Math.min(run.maxApplies ?? limits.maxAppliesPerRun, linkedInDailyCap(limits.dailyCap) - appliedToday));
   const alreadyQueued = (await db.jobs.where('status').equals('queued').toArray()).filter(isLinkedIn).length;
-  const scored = (await db.jobs.where('status').equals('scored').toArray()).filter(isLinkedIn);
+  const scored = (await db.jobs.where('status').equals('scored').toArray()).filter((job) => isLinkedIn(job) && !job.companySite);
   const candidates: Job[] = [];
   for (const job of scored) {
     if (isJobTooOld(job.postedAt, settings.maxJobAgeDays)) await updateJob(job.jobId, { status: 'stale', filterReason: 'Became too old while waiting' });

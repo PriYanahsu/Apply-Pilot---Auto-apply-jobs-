@@ -18,6 +18,13 @@ import type { ApplyResult } from '../shared/messages';
 let successTextBeforeClick = false;
 let limitTextBeforeClick = false;
 
+export async function clickCompanySite(): Promise<{ clicked: boolean }> {
+  const button = queryVisible(document, 'companySiteButton') ?? findButtonByText(BUTTON_TEXT.companySite, false);
+  if (!button) return { clicked: false };
+  await humanClick(button);
+  return { clicked: true };
+}
+
 export async function clickApply(): Promise<{ clicked: true }> {
   const button = queryVisible(document, 'applyButton') ?? findButtonByText(BUTTON_TEXT.apply, true);
   if (!button) throw makeError('SELECTOR_MISSING', 'Apply button not found', 'applyButton');

@@ -34,6 +34,7 @@ export type ContentCommand =
   | { type: 'SCRAPE_JOB_DETAIL' }
   | { type: 'SCRAPE_PROFILE' }
   | { type: 'CLICK_APPLY' }
+  | { type: 'CLICK_COMPANY_SITE' }
   | { type: 'DETECT_APPLY_RESULT'; timeoutMs: number }
   | { type: 'READ_CHATBOT' }
   | { type: 'ANSWER_CHATBOT'; answer: string | string[]; inputType: ChatInputType; send: boolean }
@@ -73,6 +74,7 @@ export const jobDetailSchema = z.object({
   // Naukri's own "Job match score" (logged in only), e.g. { 'keyskills': false, 'location': true, 'work experience': true }
   naukriMatch: z.record(z.string(), z.boolean()),
   applyType: applyTypeSchema,
+  companyUrl: z.string().optional(),
 });
 export type JobDetail = z.infer<typeof jobDetailSchema>;
 
@@ -126,9 +128,17 @@ export type LinkedInCommand =
   | { type: 'LI_CLICK_PRIMARY'; allowSubmit: boolean }
   | { type: 'LI_WAIT_FORM_CHANGE'; previousSignature: string; timeoutMs: number }
   | { type: 'LI_DISCARD' }
-  | { type: 'LI_CLOSE_DONE' };
+  | { type: 'LI_CLOSE_DONE' }
+  | { type: 'LI_CLICK_EXTERNAL' };
 
-export type AnyContentCommand = ContentCommand | LinkedInCommand;
+export type CompanyCommand =
+  | { type: 'CO_READ_FORM' }
+  | { type: 'CO_FILL_FIELD'; key: string; kind: EasyApplyField['kind']; answer: string[] }
+  | { type: 'CO_UPLOAD_RESUME'; key: string; fileName: string; dataUrl: string }
+  | { type: 'CO_CLICK_PRIMARY'; allowSubmit: boolean }
+  | { type: 'CO_WAIT_FORM_CHANGE'; previousSignature: string; timeoutMs: number };
+
+export type AnyContentCommand = ContentCommand | LinkedInCommand | CompanyCommand;
 
 export const linkedInJobDetailSchema = z.object({
   title: z.string(),
@@ -137,6 +147,7 @@ export const linkedInJobDetailSchema = z.object({
   postedText: z.string(),
   description: z.string(),
   applyType: z.enum(['easy_apply', 'external', 'already_applied', 'closed']),
+  companyUrl: z.string().optional(),
 });
 export type LinkedInJobDetail = z.infer<typeof linkedInJobDetailSchema>;
 
@@ -163,7 +174,20 @@ export const easyApplyFormSchema = z.object({
 });
 export type EasyApplyForm = z.infer<typeof easyApplyFormSchema>;
 
+export const companyFormSchema = z.object({
+  open: z.boolean(),
+  done: z.boolean(),
+  blocked: z.enum(['', 'captcha', 'login']),
+  progress: z.string(),
+  fields: z.array(easyApplyFieldSchema),
+  primaryButton: z.enum(['submit', 'review', 'next']).nullable(),
+  errors: z.array(z.string()),
+  signature: z.string(),
+});
+export type CompanyForm = z.infer<typeof companyFormSchema>;
+
 export const primaryClickSchema = z.object({ action: z.enum(['submit', 'review', 'next', 'none']), clicked: z.boolean() });
+export const clickedSchema = z.object({ clicked: z.boolean() });
 export const resumeChoiceSchema = z.object({ chosen: z.string() });
 export const linkedInProfilePageSchema = z.object({ name: z.string(), headline: z.string(), fullText: z.string() });
 

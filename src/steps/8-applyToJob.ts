@@ -20,6 +20,7 @@ import { isRunLevelError } from '../orchestrator/jobFailures';
 import { readApplyConfirmation } from '../naukri/applyConfirmation';
 import { log } from '../shared/log';
 import { sleep } from '../shared/sleep';
+import { companyUrlFromText } from '../company/hosts';
 import { applyResultSchema, emptySchema, jobDetailSchema, type ApplyResult } from '../shared/messages';
 import { filterJob } from './4-filterJobs';
 import { answerScreening } from './8-answerScreening';
@@ -57,8 +58,8 @@ export async function applyToJob(runId: number, job: Job, profile: CandidateProf
     return ourApplication ? 'applied' : 'already_applied';
   }
   if (detail.applyType === 'external') {
-    await updateJob(job.jobId, { status: 'external' });
-    await log('8-apply', 'Company-site apply - saved as external', { jobId: job.jobId });
+    await updateJob(job.jobId, { status: 'external', companySite: true, ...(detail.companyUrl ? { companyUrl: detail.companyUrl } : {}) });
+    await log('8-apply', 'Company-site apply - saved for after this queue', { jobId: job.jobId });
     return 'external';
   }
 
@@ -100,7 +101,8 @@ async function clickAndHandleResult(job: Job, settings: Settings, profile: Candi
     throw makeError('DAILY_LIMIT', "Naukri says today's apply limit is reached. Try again tomorrow.");
   }
   if (result.result === 'external') {
-    await updateJob(job.jobId, { status: 'external' });
+    const companyUrl = companyUrlFromText(result.detail) || job.companyUrl;
+    await updateJob(job.jobId, { status: 'external', companySite: true, ...(companyUrl ? { companyUrl } : {}) });
     return 'external';
   }
   let qa: Job['qa'] = job.qa ?? [];

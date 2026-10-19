@@ -27,6 +27,7 @@ function formSettings(settings: Settings): Partial<Settings> {
   const {
     dryRun: _dryRun, debugMode: _debugMode, minScore: _minScore, maxNewJobsPerRun: _maxNewJobs, maxAppliesPerRun: _maxApplies,
     platform: _platform, linkedin: _linkedin, answerMode: _answerMode, profileEdits: _profileEdits, resumeText: _resumeText, resumeFileName: _resumeFileName,
+    resumeFileData: _resumeFileData,
     ...form
   } = settings;
   return form;

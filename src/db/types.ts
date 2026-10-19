@@ -70,6 +70,7 @@ export interface Settings {
   naukriLimitHitDate?: string; // 'YYYY-MM-DD' when Naukri said "daily apply limit reached"
   resumeText?: string;
   resumeFileName?: string;
+  resumeFileData?: string; // the resume PDF as a data: URL, uploaded into Greenhouse / Lever / Ashby forms
   // Your corrections to what the AI read from your resume. They survive every profile re-read.
   profileEdits: ProfileEdits;
 }
@@ -150,6 +151,8 @@ export interface Job {
   jobId: string;          // Naukri: the numeric id; LinkedIn: 'li-<id>'
   platform?: Platform;    // missing = 'naukri' (jobs saved before LinkedIn support)
   easyApply?: boolean;    // LinkedIn: false = applies on the company website
+  companySite?: boolean;  // true = the application is on the company website, not Naukri / Easy Apply
+  companyUrl?: string;    // that website (Greenhouse, Lever, Ashby, or another host)
   url: string;
   title: string;
   company: string;
@@ -196,7 +199,8 @@ export interface SavedAnswer {
 export type StepName =
   | 'CHECK_LOGIN' | 'BUILD_PROFILE' | 'SEARCHING' | 'FILTERING'
   | 'ENRICHING' | 'SCORING' | 'QUEUEING' | 'APPLYING' | 'VERIFY_APPLIED'
-  | 'LI_CHECK_LOGIN' | 'LI_BUILD_PROFILE' | 'LI_SEARCHING' | 'LI_ENRICHING' | 'LI_QUEUEING' | 'LI_APPLYING';
+  | 'LI_CHECK_LOGIN' | 'LI_BUILD_PROFILE' | 'LI_SEARCHING' | 'LI_ENRICHING' | 'LI_QUEUEING' | 'LI_APPLYING'
+  | 'COMPANY_APPLYING';
 
 export type RunStatus = 'running' | 'paused' | 'done' | 'stopped' | 'error';
 

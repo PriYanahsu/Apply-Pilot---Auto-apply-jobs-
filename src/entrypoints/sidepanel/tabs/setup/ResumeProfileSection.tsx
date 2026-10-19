@@ -25,6 +25,16 @@ const SOURCE_COLORS: Record<Skill['source'], string> = {
   resume: 'bg-sky-100 text-sky-800', naukri: 'bg-orange-100 text-orange-800', linkedin: 'bg-indigo-100 text-indigo-800', both: 'bg-green-100 text-green-800', you: 'bg-purple-100 text-purple-800',
 };
 
+/** The PDF itself, so company-site forms (Greenhouse, Lever, Ashby) can get the resume file. */
+function readAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function ResumeProfileSection(props: { onProfileBuilt: () => void }) {
   const settings = useLiveQuery(() => getSettings());
   const profile = useLiveQuery(() => db.profile.get('main'));
@@ -44,12 +54,14 @@ export default function ResumeProfileSection(props: { onProfileBuilt: () => void
     setMessage({ text: '', kind: 'info' });
     try {
       const text = await readResumePdf(file);
+      const resumeFileData = await readAsDataUrl(file);
       if (text.length < MIN_RESUME_TEXT_CHARS) {
+        await saveSettings({ resumeFileData });
         setNeedsPaste(true);
         setMessage({ text: 'This PDF has almost no text (probably scanned). Paste your resume text below.', kind: 'error' });
         return;
       }
-      await saveSettings({ resumeText: text, resumeFileName: file.name });
+      await saveSettings({ resumeText: text, resumeFileName: file.name, resumeFileData });
       setMessage({ text: `Read ${text.length} characters from ${file.name}.`, kind: 'success' });
       await readProfile(); // no extra click: read resume + this site's profile right away
     } catch (error) {

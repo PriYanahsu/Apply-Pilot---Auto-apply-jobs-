@@ -41,7 +41,7 @@ export async function applyToLinkedInJob(runId: number, job: Job, profile: Candi
   const detail = await sendToContent({ type: 'LI_SCRAPE_JOB' }, linkedInJobDetailSchema, context(job));
   if (detail.applyType !== 'easy_apply') {
     const status = detail.applyType === 'already_applied' ? 'already_applied' : detail.applyType === 'external' ? 'external' : 'closed';
-    await updateJob(job.jobId, { status });
+    await updateJob(job.jobId, { status, ...(detail.applyType === 'external' ? { companySite: true, ...(detail.companyUrl ? { companyUrl: detail.companyUrl } : {}) } : {}) });
     await log('li-8-apply', `Not Easy Apply any more (${detail.applyType})`, { jobId: job.jobId });
     return status === 'external' ? 'external' : status === 'already_applied' ? 'already_applied' : 'failed';
   }

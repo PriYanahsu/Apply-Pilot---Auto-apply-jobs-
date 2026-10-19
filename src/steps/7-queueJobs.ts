@@ -29,7 +29,7 @@ export function compareForQueue(left: Job, right: Job): number {
  */
 async function requeueReviewJobs(): Promise<number> {
   const today = todayDateString();
-  const waiting = (await db.jobs.where('status').equals('needs_review').toArray()).filter((job) => jobPlatform(job) === 'naukri' && job.autoRetryDate !== today);
+  const waiting = (await db.jobs.where('status').equals('needs_review').toArray()).filter((job) => jobPlatform(job) === 'naukri' && !job.companySite && job.autoRetryDate !== today);
   for (const job of waiting) {
     await updateJob(job.jobId, { status: 'queued', autoRetryDate: today, lastDryRunId: undefined, pendingQuestion: undefined });
     await log('7-queue', 'Retrying a job that stopped at a screening question', { jobId: job.jobId });
@@ -50,7 +50,7 @@ export async function queueJobs(runId: number): Promise<void> {
   const room = Math.max(0, Math.min(maxApplies, effectiveDailyCap(settings.dailyCap) - appliedToday));
   const alreadyQueued = (await db.jobs.where('status').equals('queued').toArray()).filter((job) => jobPlatform(job) === 'naukri').length;
 
-  const scored = (await db.jobs.where('status').equals('scored').toArray()).filter((job) => jobPlatform(job) === 'naukri');
+  const scored = (await db.jobs.where('status').equals('scored').toArray()).filter((job) => jobPlatform(job) === 'naukri' && !job.companySite);
   const candidates: Job[] = [];
   for (const job of scored) {
     if (isJobTooOld(job.postedAt, settings.maxJobAgeDays)) {

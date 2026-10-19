@@ -95,7 +95,7 @@ export async function buildDebugReport(platform: Platform): Promise<string> {
   const lastRun = (await db.runs.orderBy('id').reverse().toArray()).find((run) => (run.platform ?? 'naukri') === platform);
   const logs = (await db.logs.orderBy('id').reverse().limit(DEBUG_REPORT_LOG_LINES * 3).toArray()).filter((row) => inScope(logScope(row, runs), platform)).slice(0, DEBUG_REPORT_LOG_LINES);
   const failures = (await db.jobs.where('status').anyOf('failed', 'needs_review').toArray()).filter((job) => jobPlatform(job) === platform).slice(-20);
-  const { geminiApiKey: _hidden, resumeText: _resume, ...safeSettings } = settings;
+  const { geminiApiKey: _hidden, resumeText: _resume, resumeFileData: _resumeFile, ...safeSettings } = settings;
   const logLines = logs.reverse().map((row) => `[${row.ts.slice(11, 19)}] [${row.step}] ${row.level === 'info' ? '' : row.level.toUpperCase() + ' '}${row.message}${row.jobId ? ` (jobId=${row.jobId})` : ''}`);
   return [
     `# ApplyPilot debug report (${platform === 'linkedin' ? 'LinkedIn' : 'Naukri'})`,

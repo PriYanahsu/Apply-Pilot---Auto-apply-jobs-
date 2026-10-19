@@ -9,7 +9,7 @@ import { defineContentScript } from 'wxt/utils/define-content-script';
 const LINKEDIN_SNAPSHOT_MAX_CHARS = 400_000;
 import { liQueryAll, visibleText } from '../linkedin/dom';
 import {
-  clickPrimary, closeAfterApplied, discardEasyApply, fillEasyApplyField, openEasyApply, selectNewestResume, waitForFormChange,
+  clickExternalApply, clickPrimary, closeAfterApplied, discardEasyApply, fillEasyApplyField, openEasyApply, selectNewestResume, waitForFormChange,
 } from '../linkedin/easyApplyActions';
 import { readEasyApplyForm } from '../linkedin/easyApplyForm';
 import { readLinkedInJobPage, waitForLinkedInJobPage } from '../linkedin/readJobPage';
@@ -122,5 +122,6 @@ async function runCommand(command: LinkedInCommand | { type: 'PING' }): Promise<
     case 'LI_WAIT_FORM_CHANGE': return waitForFormChange(command.previousSignature, command.timeoutMs);
     case 'LI_DISCARD': return discardEasyApply();
     case 'LI_CLOSE_DONE': return closeAfterApplied();
+    case 'LI_CLICK_EXTERNAL': return clickExternalApply();
   }
 }

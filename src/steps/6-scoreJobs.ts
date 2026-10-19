@@ -68,10 +68,15 @@ async function saveScore(runId: number, job: Job, profile: CandidateProfile, set
   const finalScore = computeFinalScore(ruleScore, aiScore.score, aiScore.dealBreaker, RULE_SCORE_WEIGHT, AI_SCORE_WEIGHT, DEAL_BREAKER_MAX_SCORE);
   const matched = new Map<string, string>();
   for (const skill of [...matchedSkills(jobSkills, candidateSkills), ...aiScore.matchedSkills]) if (!matched.has(normalizeSkill(skill))) matched.set(normalizeSkill(skill), skill);
+  const companySite = job.companySite === true;
   await updateJob(job.jobId, {
     ruleScore, aiScore: aiScore.score, finalScore, dealBreaker: aiScore.dealBreaker, experienceFit: fit,
-    matchReason: aiScore.reason, missingSkills: reallyMissing(aiScore.missingSkills, profile), matchedSkills: Array.from(matched.values()).slice(0, 10), status: 'scored',
+    matchReason: aiScore.reason, missingSkills: reallyMissing(aiScore.missingSkills, profile), matchedSkills: Array.from(matched.values()).slice(0, 10),
+    status: companySite ? 'external' : 'scored',
   });
   await bumpCounter(runId, 'scored');
-  await log('6-score', `Scored ${finalScore} (rule ${ruleScore}, ai ${aiScore.score}${aiScore.dealBreaker ? ', DEAL-BREAKER' : ''}): ${aiScore.reason}`, { jobId: job.jobId });
+  if (companySite) await bumpCounter(runId, 'external');
+  await log('6-score', companySite
+    ? `Company site scored ${finalScore} - applied after Naukri and LinkedIn if it is Greenhouse, Lever, or Ashby: ${aiScore.reason}`
+    : `Scored ${finalScore} (rule ${ruleScore}, ai ${aiScore.score}${aiScore.dealBreaker ? ', DEAL-BREAKER' : ''}): ${aiScore.reason}`, { jobId: job.jobId });
 }

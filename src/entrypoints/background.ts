@@ -7,6 +7,7 @@
  */
 import { defineBackground } from 'wxt/utils/define-background';
 import { testGeminiModels } from '../ai/gemini';
+import { appendCompanyStep } from '../company/hosts';
 import { ALLOWED_EXTERNAL_EXTENSION_IDS, DAILY_RUN_ALARM_NAME, KEEP_ALIVE_ALARM_NAME, PROFILE_MAX_AGE_HOURS } from '../config';
 import { db, getProfile, getSettings, jobPlatform, updateJob } from '../db/database';
 import type { Platform, Run, StepName } from '../db/types';
@@ -137,8 +138,8 @@ async function linkedInStepsForMode(mode: RunMode): Promise<StepName[]> {
   const readProfile: StepName[] = stale ? ['LI_BUILD_PROFILE'] : [];
   const findSteps: StepName[] = ['LI_CHECK_LOGIN', ...readProfile, 'LI_SEARCHING', 'FILTERING', 'LI_ENRICHING', 'SCORING'];
   if (mode === 'find') return findSteps;
-  if (mode === 'apply') return ['LI_CHECK_LOGIN', ...readProfile, 'LI_QUEUEING', 'LI_APPLYING'];
-  return [...findSteps, 'LI_QUEUEING', 'LI_APPLYING'];
+  if (mode === 'apply') return appendCompanyStep(['LI_CHECK_LOGIN', ...readProfile, 'LI_QUEUEING', 'LI_APPLYING'], false);
+  return appendCompanyStep([...findSteps, 'LI_QUEUEING', 'LI_APPLYING'], false);
 }
 
 async function stepsForMode(mode: RunMode, platform?: Platform): Promise<StepName[]> {
@@ -146,8 +147,8 @@ async function stepsForMode(mode: RunMode, platform?: Platform): Promise<StepNam
   const needsProfile = await profileNeedsReading();
   const findSteps: StepName[] = ['CHECK_LOGIN', ...(needsProfile ? ['BUILD_PROFILE' as const] : []), 'SEARCHING', 'FILTERING', 'ENRICHING', 'SCORING'];
   if (mode === 'find') return findSteps;
-  if (mode === 'apply') return ['CHECK_LOGIN', ...(needsProfile ? ['BUILD_PROFILE' as const] : []), 'QUEUEING', 'APPLYING'];
-  return [...findSteps, 'QUEUEING', 'APPLYING'];
+  if (mode === 'apply') return appendCompanyStep(['CHECK_LOGIN', ...(needsProfile ? ['BUILD_PROFILE' as const] : []), 'QUEUEING', 'APPLYING'], false);
+  return appendCompanyStep([...findSteps, 'QUEUEING', 'APPLYING'], false);
 }
 
 async function startRun(mode: RunMode): Promise<number> {
@@ -156,7 +157,8 @@ async function startRun(mode: RunMode): Promise<number> {
 
 /** "Run both": Naukri's full run now; LinkedIn's full run starts by itself when Naukri ends (unless you stop it). */
 async function startBoth(): Promise<number> {
-  return startNewRun('both', await stepsForMode('full', 'naukri'), { platform: 'naukri', chainNext: 'linkedin' });
+  // Naukri half must not open company sites. The chained LinkedIn run applies them after Easy Apply.
+  return startNewRun('both', appendCompanyStep(await stepsForMode('full', 'naukri'), true), { platform: 'naukri', chainNext: 'linkedin' });
 }
 
 async function startChainedRun(finished: Run): Promise<void> {

@@ -7,6 +7,7 @@
  * RETURNS: JobDetail (applyType = 'naukri' | 'external' | 'already_applied')
  * IF IT BREAKS: empty descriptions -> SEL.jobDescription; wrong apply type -> detectApplyType() below.
  */
+import { controlHrefs, pickCompanyUrl } from '../company/hosts';
 import { BUTTON_TEXT } from './selectors';
 import {
   cleanText, findButtonByText, isVisible, makeError, queryAll, queryOptional, queryVisible, textOf, waitForCondition,
@@ -47,7 +48,15 @@ export function readJobPage(root: ParentNode = document): JobDetail {
     education,
     naukriMatch: readNaukriMatchScore(root),
     applyType: detectApplyType(root),
+    companyUrl: readCompanyUrl(root),
   };
+}
+
+function readCompanyUrl(root: ParentNode): string {
+  const button = queryOptional(root, 'companySiteButton') ?? findButtonByText(BUTTON_TEXT.companySite, false, root);
+  const pageHrefs = Array.from(root.querySelectorAll('a[href]')).map((link) => link.getAttribute('href'));
+  const base = root instanceof Document && root.URL && root.URL !== 'about:blank' ? root.URL : undefined;
+  return pickCompanyUrl(controlHrefs(button), pageHrefs, base);
 }
 
 /** "Job match score" items: a check icon = match, anything else = no match. Empty when logged out. */

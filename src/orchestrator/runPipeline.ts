@@ -18,6 +18,7 @@ import { enrichJobs } from '../steps/5-enrichJobs';
 import { scoreJobs } from '../steps/6-scoreJobs';
 import { queueJobs } from '../steps/7-queueJobs';
 import { applyQueuedJobs } from '../steps/8-applyQueuedJobs';
+import { applyCompanySites } from '../steps/company/applyCompanySites';
 import { verifyAppliedJobs } from '../steps/9-verifyApplied';
 import { checkLinkedInLogin } from '../steps/linkedin/li-1-checkLogin';
 import { buildLinkedInProfile } from '../steps/linkedin/li-2-buildProfile';
@@ -38,6 +39,7 @@ const STEP_FUNCTIONS: Record<StepName, (runId: number) => Promise<unknown>> = {
   QUEUEING: queueJobs,
   APPLYING: applyQueuedJobs,
   VERIFY_APPLIED: verifyAppliedJobs,
+  COMPANY_APPLYING: applyCompanySites,
   LI_CHECK_LOGIN: () => checkLinkedInLogin(),
   LI_BUILD_PROFILE: () => buildLinkedInProfile(),
   LI_SEARCHING: searchLinkedInJobs,

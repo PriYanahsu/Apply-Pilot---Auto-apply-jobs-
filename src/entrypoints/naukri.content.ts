@@ -11,7 +11,7 @@ import { SNAPSHOT_HTML_MAX_CHARS } from '../config';
 import { readSearchPage } from '../naukri/readSearchPage';
 import { readJobPage, waitForJobPage } from '../naukri/readJobPage';
 import { readProfilePage, waitForProfilePage } from '../naukri/readProfilePage';
-import { clickApply, detectApplyResult } from '../naukri/clickApply';
+import { clickApply, clickCompanySite, detectApplyResult } from '../naukri/clickApply';
 import { answerChatbot, readChatbotWithAllOptions, waitChatbotChange } from '../naukri/chatbot';
 import { pageHasCaptcha, type CodedError } from '../naukri/domHelpers';
 import type { CommandResult, ContentCommand } from '../shared/messages';
@@ -56,6 +56,7 @@ async function runCommand(command: ContentCommand): Promise<unknown> {
     case 'SCRAPE_JOB_DETAIL': return waitForJobPage().then(() => readJobPage());
     case 'SCRAPE_PROFILE': return waitForProfilePage().then(() => readProfilePage());
     case 'CLICK_APPLY': return clickApply();
+    case 'CLICK_COMPANY_SITE': return clickCompanySite();
     case 'DETECT_APPLY_RESULT': return detectApplyResult(command.timeoutMs);
     case 'READ_CHATBOT': return readChatbotWithAllOptions();
     case 'ANSWER_CHATBOT': return answerChatbot(command.answer, command.inputType, command.send);

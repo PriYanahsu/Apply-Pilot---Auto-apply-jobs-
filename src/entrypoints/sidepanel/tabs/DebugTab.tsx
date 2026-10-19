@@ -22,6 +22,7 @@ const STEP_BUTTONS: { label: string; step: StepName }[] = [
   { label: 'Score', step: 'SCORING' },
   { label: 'Queue', step: 'QUEUEING' },
   { label: 'Re-check applied jobs', step: 'VERIFY_APPLIED' },
+  { label: 'Company sites', step: 'COMPANY_APPLYING' },
 ];
 
 export default function DebugTab() {

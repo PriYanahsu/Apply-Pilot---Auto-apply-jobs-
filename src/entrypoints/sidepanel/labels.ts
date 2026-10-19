@@ -13,7 +13,7 @@ export const STATUS_INFO: Record<JobStatus, { label: string; color: string; hint
   queued: { label: 'Queued', color: 'bg-brand-100 text-brand-800', hint: 'Will be applied to next' },
   applied: { label: 'Applied', color: 'bg-emerald-100 text-emerald-800', hint: 'Confirmed applied on Naukri' },
   already_applied: { label: 'Already applied', color: 'bg-emerald-50 text-emerald-700', hint: 'You had applied before' },
-  external: { label: 'Company site', color: 'bg-purple-100 text-purple-800', hint: 'Apply yourself on the company website (Jobs > Company site), then click Mark applied' },
+  external: { label: 'Company site', color: 'bg-purple-100 text-purple-800', hint: 'Greenhouse, Lever, and Ashby are applied after Naukri and LinkedIn. Other sites stay here for you.' },
   needs_review: { label: 'Needs answer', color: 'bg-amber-100 text-amber-800', hint: 'A screening question needs your answer' },
   failed: { label: 'Failed', color: 'bg-red-100 text-red-700', hint: 'Something went wrong - see the reason' },
   filtered_out: { label: 'Filtered out', color: 'bg-slate-100 text-slate-500', hint: 'Skipped: does not fit your filters' },
@@ -37,6 +37,7 @@ export const STEP_LABELS: Record<StepName, string> = {
   LI_ENRICHING: 'Read each LinkedIn job',
   LI_QUEUEING: 'Pick the best matches',
   LI_APPLYING: 'Easy Apply one by one (slowly)',
+  COMPANY_APPLYING: 'Apply on Greenhouse, Lever, and Ashby',
 };
 
 export const RUN_MODE_LABELS: Record<string, string> = {

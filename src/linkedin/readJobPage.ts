@@ -5,6 +5,7 @@
  * CALLED BY: entrypoints/linkedin.content.ts (LI_SCRAPE_JOB)
  * IF IT BREAKS: Easy Apply not found -> LI_SEL.easyApplyButton (aria-label "Easy Apply to this job").
  */
+import { controlHrefs, pickCompanyUrl } from '../company/hosts';
 import { makeError, waitForCondition } from '../naukri/domHelpers';
 import type { LinkedInJobDetail } from '../shared/messages';
 import { liButtonByText, liQuery, visibleText } from './dom';
@@ -84,5 +85,13 @@ export function readLinkedInJobPage(root: ParentNode = document): LinkedInJobDet
     postedText: topLine.match(LI_TEXT.posted)?.[0] ?? '',
     description,
     applyType,
+    companyUrl: readCompanyUrl(root),
   };
+}
+
+function readCompanyUrl(root: ParentNode): string {
+  const button = liQuery(root, 'externalApplyButton') ?? liButtonByText(root, ['apply on company website', 'apply on company site']);
+  const pageHrefs = Array.from(root.querySelectorAll('a[href]')).map((link) => link.getAttribute('href'));
+  const base = root instanceof Document && root.URL && !root.URL.startsWith('about:') ? root.URL : 'https://www.linkedin.com/';
+  return pickCompanyUrl(controlHrefs(button), pageHrefs, base);
 }

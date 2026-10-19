@@ -117,7 +117,7 @@ Each job gets a score from 0 to 100:
 - **Keep Chrome open** while it runs. It works in a tab of its own, so don't close that tab.
 - **Review tab:** if a recruiter asks a question ApplyPilot can't answer, the job goes here. Type the answer once, and ApplyPilot remembers it for next time.
 - **Captcha:** if Naukri shows a captcha, the run pauses. Solve it in the Naukri tab and click **Resume**.
-- **Company-website jobs** are saved for you to apply to yourself.
+- **Company-website jobs** on Greenhouse, Lever, and Ashby are applied after Naukri and LinkedIn finish. Other company sites are saved for you to apply to yourself.
 - **"Gemini quota reached":** the free daily limit is used up. Try again tomorrow, or click **Resume** later.
 - **LinkedIn:** pick **LinkedIn** in the header dropdown and log in to linkedin.com. Keep the numbers low, because LinkedIn may restrict accounts that look automated.
 

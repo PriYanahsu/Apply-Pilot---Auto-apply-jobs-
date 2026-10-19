@@ -139,7 +139,7 @@ export async function sendToContent<T>(command: AnyContentCommand, schema: z.Zod
   const tabId = await getWorkerTabId();
   await waitForContentScript(tabId);
   const commandTimeout = 'timeoutMs' in command ? command.timeoutMs + 5_000
-    : command.type === 'ANSWER_CHATBOT' || command.type.startsWith('LI_') ? CHATBOT_ANSWER_TIMEOUT_MS : CONTENT_COMMAND_TIMEOUT_MS;
+    : command.type === 'ANSWER_CHATBOT' || command.type.startsWith('LI_') || command.type.startsWith('CO_') ? CHATBOT_ANSWER_TIMEOUT_MS : CONTENT_COMMAND_TIMEOUT_MS;
   const reply = await sendRaw(tabId, command, commandTimeout);
   if (!reply.ok) {
     if (reply.error.snapshot) {

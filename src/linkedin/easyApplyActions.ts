@@ -15,6 +15,15 @@ const DIALOG_OPEN_TIMEOUT_MS = 12_000;
 const TYPEAHEAD_WAIT_MS = 3_000;
 const SETTLE_MS = 900;
 
+/** Clicks "Apply on company website", never the Easy Apply button. */
+export async function clickExternalApply(): Promise<{ clicked: boolean }> {
+  const easyApply = liQuery(document, 'easyApplyButton');
+  const button = liQuery(document, 'externalApplyButton') ?? liButtonByText(document, ['apply on company website', 'apply on company site']);
+  if (!button || button === easyApply) return { clicked: false };
+  await humanClick(button);
+  return { clicked: true };
+}
+
 export async function openEasyApply(): Promise<EasyApplyForm> {
   const button = liQuery(document, 'easyApplyButton');
   if (!button) throw makeError('SELECTOR_MISSING', 'Easy Apply button not found', 'easyApplyButton');

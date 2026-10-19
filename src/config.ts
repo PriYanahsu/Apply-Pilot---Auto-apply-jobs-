@@ -117,6 +117,11 @@ export const LINKEDIN_LONG_BREAK_MS = { min: 180_000, max: 360_000 };
 export const LINKEDIN_MAX_FORM_PAGES = 12;
 export const LINKEDIN_FORM_TIMEOUT_MS = 15_000;
 
+// Company sites (Greenhouse, Lever, Ashby) run after in-platform applies. Same human pause as a Naukri apply.
+export const COMPANY_DELAY_BETWEEN_APPLIES_MS = { min: 8_000, max: 15_000 };
+export const COMPANY_MAX_FORM_PAGES = 8;
+export const COMPANY_FORM_TIMEOUT_MS = 12_000;
+
 export const DEFAULT_SETTINGS: Settings = {
   id: 'main',
   // Your key from .env.local is used ONLY in `npm run dev`. The shareable `npm run build` contains no key:

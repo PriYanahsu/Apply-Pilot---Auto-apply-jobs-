@@ -3,6 +3,7 @@
  * WHAT: One job as a card: match score, title, company, location, age, status, why, missing skills, actions.
  * CALLED BY: tabs/JobsTab.tsx
  */
+import { detectAts } from '../../../../company/hosts';
 import { AI_SCORE_WEIGHT, RULE_SCORE_WEIGHT } from '../../../../config';
 import { updateJob } from '../../../../db/database';
 import type { Job } from '../../../../db/types';
@@ -76,7 +77,9 @@ export default function JobCard({ job, onApplyNow }: { job: Job; onApplyNow: () 
 
       {job.status === 'external' && (
         <p className="mt-2 rounded-lg bg-purple-50 px-2.5 py-1.5 text-[11px] text-purple-800">
-          This company takes applications only on its own website. Open the job, click <b>"Apply on company site"</b>, then come back and click <b>Mark applied</b>.
+          {job.companyUrl && detectAts(job.companyUrl)
+            ? <>ApplyPilot fills this {detectAts(job.companyUrl)} form after Naukri and LinkedIn applications finish.</>
+            : <>This company takes applications on its own website. Open it, apply, then click <b>Mark applied</b>.</>}
         </p>
       )}
 

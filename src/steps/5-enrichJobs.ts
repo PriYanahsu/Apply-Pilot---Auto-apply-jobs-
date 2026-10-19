@@ -4,7 +4,7 @@
  *       posted date (freshness gate #2) and how to apply (Naukri / company site / already applied).
  * CALLED BY: orchestrator/runPipeline.ts (step ENRICHING)
  * READS: db.jobs (status 'passed_filters')
- * WRITES: description, skills, status -> 'enriched' | 'external' | 'already_applied' | 'stale' | 'failed'
+ * WRITES: description, skills, companySite, status -> 'enriched' | 'already_applied' | 'stale' | 'failed'
  * IF IT BREAKS: Debug > Snapshots shows the page when a selector was missing.
  */
 import { db, getSettings, jobPlatform, updateJob } from '../db/database';
@@ -74,9 +74,9 @@ async function enrichOneJob(runId: number, job: Job): Promise<void> {
   }
 
   if (detail.applyType === 'external') {
-    await updateJob(job.jobId, { ...changes, status: 'external' });
-    await bumpCounter(runId, 'external');
-    await log('5-enrich', 'Company-site apply: saved as external (apply by hand)', { jobId: job.jobId });
+    // Scored with the other jobs, then applied in COMPANY_APPLYING after the Naukri queue is empty.
+    await updateJob(job.jobId, { ...changes, status: 'enriched', companySite: true, ...(detail.companyUrl ? { companyUrl: detail.companyUrl } : {}) });
+    await log('5-enrich', 'Company-site job - will be scored, then applied after Naukri if the site is Greenhouse, Lever, or Ashby', { jobId: job.jobId });
   } else if (detail.applyType === 'already_applied') {
     await updateJob(job.jobId, { ...changes, status: 'already_applied' });
     await log('5-enrich', 'Already applied on Naukri', { jobId: job.jobId });

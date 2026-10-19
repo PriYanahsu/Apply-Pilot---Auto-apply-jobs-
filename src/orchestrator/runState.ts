@@ -81,6 +81,7 @@ export const WAIT_REASONS = {
   betweenJobPages: 'Natural pace between job pages, like reading one job and then opening the next.',
   betweenSearchPages: 'Short pause between search pages, like scrolling the results at a normal pace.',
   afterNaukriApply: 'Short pause after applying before the next job.',
+  afterCompanyApply: 'Short pause after a company-site application before the next one.',
 } as const;
 
 /**

@@ -1,7 +1,7 @@
 /**
  * FILE: steps/linkedin/li-5-enrichJobs.ts
  * WHAT: Opens each LinkedIn job that passed the filters and reads the full "About the job" text and how to apply:
- *       Easy Apply -> 'enriched' (will be scored), company website -> 'external', applied -> 'already_applied',
+ *       Easy Apply -> 'enriched' (will be scored), company website -> 'enriched' + companySite (scored, then COMPANY_APPLYING), applied -> 'already_applied',
  *       closed -> 'stale'. Freshness gate #2 uses the posted date on the job page.
  * CALLED BY: orchestrator/runPipeline.ts (step LI_ENRICHING)
  */
@@ -10,7 +10,7 @@ import { db, getSettings, jobPlatform, updateJob } from '../../db/database';
 import type { Job } from '../../db/types';
 import { isJobTooOld, parsePostedText } from '../../matching/postedDate';
 import { handleJobError, resetSelectorStreak } from '../../orchestrator/jobFailures';
-import { bumpCounter, checkpoint, waitWithCheckpoints } from '../../orchestrator/runState';
+import { checkpoint, waitWithCheckpoints } from '../../orchestrator/runState';
 import { navigateWorkerTab, sendToContent } from '../../orchestrator/workerTab';
 import { log } from '../../shared/log';
 import { linkedInJobDetailSchema } from '../../shared/messages';
@@ -47,9 +47,8 @@ async function enrichOne(runId: number, job: Job): Promise<boolean> {
   } else if (isJobTooOld(postedAt, settings.maxJobAgeDays)) {
     await updateJob(job.jobId, { ...changes, status: 'stale', filterReason: `Posted "${detail.postedText}"` });
   } else if (detail.applyType === 'external') {
-    await updateJob(job.jobId, { ...changes, status: 'external' });
-    await bumpCounter(runId, 'external');
-    await log('li-5-enrich', `Checked on the job page: applies on the company website - saved under Company site (${job.title} @ ${job.company})`, { jobId: job.jobId });
+    await updateJob(job.jobId, { ...changes, status: 'enriched', companySite: true, ...(detail.companyUrl ? { companyUrl: detail.companyUrl } : {}) });
+    await log('li-5-enrich', `Company website - will be scored, then applied after Easy Apply if it is Greenhouse, Lever, or Ashby (${job.title} @ ${job.company})`, { jobId: job.jobId });
   } else if (detail.applyType === 'already_applied') {
     await updateJob(job.jobId, { ...changes, status: 'already_applied' });
   } else {
